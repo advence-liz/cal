@@ -59,7 +59,7 @@ body {
 
 .main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
   gap: 1.5rem;
   padding: 1.5rem;
   max-width: 1100px;
@@ -67,7 +67,12 @@ body {
 }
 
 @media (max-width: 820px) {
-  .main { grid-template-columns: 1fr; }
+  .main { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cal-panel,
+.tools {
+  min-width: 0;
 }
 
 .cal-panel,
@@ -103,9 +108,16 @@ body {
 .cal-nav button:hover { background: var(--hover); }
 .cal-nav .today-btn { margin-left: 0.5rem; }
 
+@media (max-width: 400px) {
+  .cal-nav { gap: 0.35rem; }
+  .cal-nav h2 { font-size: 1rem; white-space: nowrap; }
+  .cal-nav button { padding: 0.3rem 0.55rem; font-size: 0.85rem; }
+  .cal-nav .today-btn { margin-left: 0.25rem; }
+}
+
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -219,6 +231,7 @@ body {
 }
 .tool-card label input {
   flex: 1;
+  min-width: 0;
   padding: 0.3rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 4px;
