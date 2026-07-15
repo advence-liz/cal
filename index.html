@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中国工作日历</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>📅 中国工作日历</h1>
+    <div class="next-holiday" id="nextHoliday">加载中…</div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <main class="main">
+    <section class="cal-panel">
+      <div class="cal-nav">
+        <button id="prevMonth" type="button" aria-label="上月">‹</button>
+        <h2 id="monthTitle">—</h2>
+        <button id="nextMonth" type="button" aria-label="下月">›</button>
+        <button id="todayBtn" type="button" class="today-btn">回到今天</button>
+      </div>
+
+      <div class="cal-grid" id="calGrid">
+        <div class="cal-head">一</div>
+        <div class="cal-head">二</div>
+        <div class="cal-head">三</div>
+        <div class="cal-head">四</div>
+        <div class="cal-head">五</div>
+        <div class="cal-head sat">六</div>
+        <div class="cal-head sun">日</div>
+      </div>
+
+      <div class="legend">
+        <span><i class="dot dot--holiday"></i>法定假</span>
+        <span><i class="dot dot--makeup"></i>调休补班</span>
+        <span><i class="dot dot--weekend"></i>周末</span>
+        <span><i class="dot dot--today"></i>今天</span>
+      </div>
+    </section>
+
+    <aside class="tools">
+      <article class="tool-card">
+        <h3>区间工作日数</h3>
+        <form id="countForm">
+          <label>起：<input type="date" name="start" required></label>
+          <label>止：<input type="date" name="end" required></label>
+          <button type="submit">计算</button>
+        </form>
+        <output class="result" id="countResult"></output>
+      </article>
+
+      <article class="tool-card">
+        <h3>N 个工作日后</h3>
+        <form id="addForm">
+          <label>起：<input type="date" name="start" required></label>
+          <label>N：<input type="number" name="n" required step="1" value="5"></label>
+          <button type="submit">计算</button>
+        </form>
+        <output class="result" id="addResult"></output>
+        <small class="hint">N 可为负（向前数）。N=0 返回起始日本身。</small>
+      </article>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    数据源：
+    <a href="https://github.com/NateScarlet/holiday-cn" target="_blank" rel="noopener">NateScarlet/holiday-cn</a>
+    （国务院办公厅口径，含调休）
+  </footer>
+
+  <script src="vendor/lunar.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

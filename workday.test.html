@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>workday.js 单测</title>
+  <style>
+    body { font-family: ui-monospace, monospace; padding: 1rem; max-width: 900px; }
+    .ok  { color: #2e7d32; }
+    .bad { color: #c62828; }
+    li { margin: .25rem 0; }
+    h2 { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>workday.js 单测</h1>
+  <p>底层纯函数测试。所有项绿色即通过。</p>
+  <h2 id="summary">运行中…</h2>
+  <ul id="out"></ul>
+
+  <script type="module">
+    import { runTests } from './workday.test.js';
+    const results = runTests();
+    const ul = document.getElementById('out');
+    let pass = 0;
+    for (const r of results) {
+      const li = document.createElement('li');
+      li.className = r.ok ? 'ok' : 'bad';
+      li.textContent = (r.ok ? '✓ ' : '✗ ') + r.name + (r.ok ? '' : ' — ' + r.err);
+      ul.appendChild(li);
+      if (r.ok) pass++;
+    }
+    const summary = document.getElementById('summary');
+    const all = results.length;
+    summary.textContent = `${pass}/${all} 通过`;
+    summary.className = pass === all ? 'ok' : 'bad';
+    console.log(`[workday tests] ${pass}/${all} pass`);
+  </script>
+</body>
+</html>
