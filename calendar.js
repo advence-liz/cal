@@ -2,6 +2,7 @@
 
 import { formatDate, parseDate } from './workday.js';
 import { getDayInfo } from './lunar-adapter.js';
+import { JIEQI_INFO, FESTIVAL_INFO } from './almanac-info.js';
 
 const MONTH_NAMES = ['一月', '二月', '三月', '四月', '五月', '六月',
                      '七月', '八月', '九月', '十月', '十一月', '十二月'];
@@ -85,6 +86,18 @@ export function describeDayText(info) {
     if (info.lunarInfo.festival) lines.push(`传统节日：${info.lunarInfo.festival}`);
   }
   return lines;
+}
+
+// Background/科普 blurbs for this day's 节气/节日, if we have a curated
+// entry for them. Deliberately returns nothing for terms we're not
+// confident describing accurately (see almanac-info.js).
+export function describeDayFacts(info) {
+  const facts = [];
+  if (!info.lunarInfo) return facts;
+  const { jieqi, festival } = info.lunarInfo;
+  if (jieqi && JIEQI_INFO[jieqi]) facts.push({ term: jieqi, kind: 'jieqi', blurb: JIEQI_INFO[jieqi] });
+  if (festival && FESTIVAL_INFO[festival]) facts.push({ term: festival, kind: 'festival', blurb: FESTIVAL_INFO[festival] });
+  return facts;
 }
 
 // Does this day's 宜 (suitable) list include the given almanac term?

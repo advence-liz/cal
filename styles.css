@@ -388,6 +388,21 @@ body {
 .almanac-tag--ji { background: var(--holiday-bg); color: var(--holiday); }
 .almanac-tag--empty { background: var(--alt-bg); color: var(--muted); }
 
+.day-detail__facts {
+  margin-top: 0.6rem;
+}
+.day-detail__facts .fact {
+  margin: 0.3rem 0 0 0;
+  padding: 0.5rem 0.7rem;
+  background: var(--alt-bg);
+  border-left: 3px solid var(--today);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.day-detail__facts .fact strong { color: var(--text); }
+
 .tools {
   display: flex;
   flex-direction: column;
