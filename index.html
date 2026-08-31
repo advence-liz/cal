@@ -4,9 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>中国工作日历</title>
+  <meta name="description" content="标注法定节假日、调休补班日、农历的静态工作日历，支持区间工作日数统计和 N 个工作日后计算。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="中国工作日历">
+  <meta property="og:description" content="标注法定节假日、调休补班日、农历的静态工作日历，支持区间工作日数统计和 N 个工作日后计算。">
+  <meta property="og:image" content="icon-512.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="中国工作日历">
+  <meta name="twitter:description" content="标注法定节假日、调休补班日、农历的静态工作日历。">
+  <meta name="twitter:image" content="icon-512.png">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self';">
   <meta name="theme-color" content="#1e88e5">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -85,12 +95,6 @@
 
   <script src="vendor/lunar.js"></script>
   <script type="module" src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js').catch(() => {});
-      });
-    }
-  </script>
+  <script src="sw-register.js"></script>
 </body>
 </html>

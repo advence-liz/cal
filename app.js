@@ -186,20 +186,49 @@ function bindNav() {
   });
 }
 
+function selectDay(cell) {
+  state.selected = cell.dataset.date;
+  $('countForm').start.value = state.selected;
+  $('addForm').start.value = state.selected;
+
+  $('calGrid').querySelectorAll('.day--selected').forEach((el) => el.classList.remove('day--selected'));
+  cell.classList.add('day--selected');
+
+  showDayDetail(state.selected);
+  updateHash();
+}
+
+// Arrow-key movement is clamped to the cells currently rendered in the grid
+// (35/42 cells incl. adjacent-month bleed) rather than crossing months —
+// crossing would require an async re-render mid-keystroke.
+function moveFocus(fromCell, deltaIndex) {
+  const cells = [...$('calGrid').querySelectorAll('.day')];
+  const idx = cells.indexOf(fromCell);
+  const next = cells[idx + deltaIndex];
+  if (next) next.focus();
+}
+
 function bindCalendarSelect() {
   $('calGrid').addEventListener('click', (e) => {
     const cell = e.target.closest('.day');
     if (!cell || !cell.dataset.date) return;
+    selectDay(cell);
+  });
 
-    state.selected = cell.dataset.date;
-    $('countForm').start.value = state.selected;
-    $('addForm').start.value = state.selected;
-
-    $('calGrid').querySelectorAll('.day--selected').forEach((el) => el.classList.remove('day--selected'));
-    cell.classList.add('day--selected');
-
-    showDayDetail(state.selected);
-    updateHash();
+  $('calGrid').addEventListener('keydown', (e) => {
+    const cell = e.target.closest('.day');
+    if (!cell || !cell.dataset.date) return;
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        selectDay(cell);
+        break;
+      case 'ArrowRight': e.preventDefault(); moveFocus(cell, 1); break;
+      case 'ArrowLeft': e.preventDefault(); moveFocus(cell, -1); break;
+      case 'ArrowDown': e.preventDefault(); moveFocus(cell, 7); break;
+      case 'ArrowUp': e.preventDefault(); moveFocus(cell, -7); break;
+    }
   });
 }
 

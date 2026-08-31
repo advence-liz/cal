@@ -1,0 +1,11 @@
+{
+  "name": "cal",
+  "private": true,
+  "description": "中国工作日历 — 静态站点的 CI 测试脚手架（页面本身零构建、零依赖）",
+  "scripts": {
+    "test": "node scripts/run-tests.mjs"
+  },
+  "devDependencies": {
+    "puppeteer": "^25.9.0"
+  }
+}

@@ -1,0 +1,34 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install test dependencies
+        run: npm install
+
+      - name: Serve the site
+        run: python3 -m http.server 8080 &
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8080/tests.html > /dev/null && exit 0
+            sleep 0.5
+          done
+          echo "server did not come up in time" >&2
+          exit 1
+
+      - name: Run browser tests
+        run: npm test

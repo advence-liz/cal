@@ -226,6 +226,10 @@ body {
   cursor: pointer;
 }
 .day:hover { background: var(--hover); }
+.day:focus-visible {
+  outline: 2px solid var(--today);
+  outline-offset: 2px;
+}
 .day.day--selected {
   background: var(--today);
   color: #fff;
