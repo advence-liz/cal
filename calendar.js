@@ -1,6 +1,6 @@
 // Month grid renderer. Monday-first (中国习惯).
 
-import { formatDate, parseDate } from './workday.js';
+import { formatDate, parseDate, addDays } from './workday.js';
 import { getDayInfo } from './lunar-adapter.js';
 import { JIEQI_INFO, FESTIVAL_INFO } from './almanac-info.js';
 
@@ -105,6 +105,20 @@ export function suitsActivity(info, term) {
   return !!term && !!info.lunarInfo && info.lunarInfo.yi.includes(term);
 }
 
+// Scan forward from (not including) fromDateStr for the next date whose 宜
+// list includes `term`. Pure algorithmic lunar lookup — no CDN/holiday data
+// needed, so it can search arbitrarily far ahead. Returns null if nothing
+// found within maxDays (shouldn't happen in practice; every activity in
+// ACTIVITIES recurs at least every few weeks).
+export function findNextSuitableDate(fromDateStr, term, dataStore, maxDays = 730) {
+  let cursor = fromDateStr;
+  for (let i = 0; i < maxDays; i++) {
+    cursor = addDays(cursor, 1);
+    if (suitsActivity(describeDay(cursor, dataStore), term)) return cursor;
+  }
+  return null;
+}
+
 export function renderMonth(year, month, container, dataStore, todayStr, selectedStr, activityTerm = '') {
   // month is 1-12
   // Clear existing day cells, keep header (7 .cal-head)
@@ -130,6 +144,9 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
   if (dateStr === todayStr) cell.classList.add('day--today');
   if (dateStr === selectedStr) cell.classList.add('day--selected');
   if (suitsActivity(info, activityTerm)) cell.classList.add('day--suits');
+
+  const facts = describeDayFacts(info);
+  if (facts.length > 0) cell.classList.add('day--has-fact');
 
   if (meta) {
     cell.classList.add(meta.isOffDay ? 'day--holiday' : 'day--makeup');
@@ -169,6 +186,14 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
     if (tagKind) tag.classList.add(`tag--${tagKind}`);
     tag.textContent = tagText;
     cell.appendChild(tag);
+  }
+
+  if (facts.length > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'fact-badge';
+    badge.textContent = '📖';
+    badge.setAttribute('aria-hidden', 'true');
+    cell.appendChild(badge);
   }
 
   return cell;
