@@ -92,6 +92,8 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr) {
   const cell = document.createElement('div');
   cell.className = 'day';
   cell.dataset.date = dateStr;
+  cell.tabIndex = 0;
+  cell.setAttribute('role', 'button');
   if (otherMonth) cell.classList.add('day--other-month');
   if (dateStr === todayStr) cell.classList.add('day--today');
   if (dateStr === selectedStr) cell.classList.add('day--selected');
@@ -102,7 +104,10 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr) {
     cell.classList.add('day--weekend');
   }
   const titleParts = describeDayText(info);
-  if (titleParts.length > 0) cell.title = titleParts.join(' · ');
+  if (titleParts.length > 0) {
+    cell.title = titleParts.join(' · ');
+    cell.setAttribute('aria-label', `${dateStr} ${titleParts.join('，')}`);
+  }
 
   const num = document.createElement('span');
   num.className = 'num';

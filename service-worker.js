@@ -1,7 +1,12 @@
 // App-shell cache for offline use. Holiday-data requests (jsDelivr CDN) are
 // left untouched here — holidays.js already handles its own localStorage
 // cache + TTL + stale fallback.
-const CACHE_NAME = 'cal-shell-v1';
+//
+// Network-first, cache-fallback: always try the network so a deployed update
+// is visible on the very next load, and only fall back to the cached shell
+// when offline. (A stale-while-revalidate strategy was tried first but meant
+// every update needed two page loads to show up — network-first avoids that.)
+const CACHE_NAME = 'cal-shell-v2';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -14,6 +19,9 @@ const SHELL_FILES = [
   './vendor/lunar.js',
   './manifest.json',
   './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './sw-register.js',
 ];
 
 self.addEventListener('install', (event) => {
@@ -32,24 +40,20 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Stale-while-revalidate: serve from cache immediately, refresh in background.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });
