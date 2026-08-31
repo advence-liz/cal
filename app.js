@@ -124,24 +124,7 @@ function showDayDetail(dateStr) {
     `<p class="fact"><strong>${f.term}</strong>：${f.blurb}</p>`
   ).join('');
 
-  // Collapse the almanac section again on every new day selection — keeps
-  // the default view focused on "am I working today", per design review.
-  $('almanacDetail').hidden = true;
-  $('almanacToggle').setAttribute('aria-expanded', 'false');
-  $('almanacToggle').classList.remove('almanac-toggle--open');
-
   $('dayDetail').hidden = false;
-}
-
-function bindAlmanacToggle() {
-  const btn = $('almanacToggle');
-  const panel = $('almanacDetail');
-  btn.addEventListener('click', () => {
-    const open = panel.hidden;
-    panel.hidden = !open;
-    btn.setAttribute('aria-expanded', String(open));
-    btn.classList.toggle('almanac-toggle--open', open);
-  });
 }
 
 function bindCount() {
@@ -346,7 +329,6 @@ async function init() {
   bindNav();
   bindActivityFilters();
   bindCalendarSelect();
-  bindAlmanacToggle();
   bindCount();
   bindAdd();
   bindHashChange();

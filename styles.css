@@ -417,22 +417,7 @@ body {
 .almanac-tag--ji { background: var(--ji-bg); color: var(--ji); border-left-color: var(--ji); }
 .almanac-tag--empty { background: var(--alt-bg); color: var(--muted); border-left-color: transparent; }
 
-.almanac-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.6rem;
-  padding: 0.3rem 0;
-  background: none;
-  border: none;
-  color: var(--today);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.almanac-toggle__arrow { transition: transform 0.15s; display: inline-block; }
-.almanac-toggle--open .almanac-toggle__arrow { transform: rotate(180deg); }
-.almanac-detail { margin-top: 0.3rem; }
+.almanac-detail { margin-top: 0.6rem; }
 
 .day-detail__facts {
   margin-top: 0.6rem;
