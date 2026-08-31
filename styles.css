@@ -22,6 +22,10 @@
   --next-border: #fecaca;
   --yi: #2e7d32;
   --yi-bg: #e8f5e9;
+  --yi-contrast: #ffffff;
+  --ji: #6a1b9a;
+  --ji-bg: #f3e5f5;
+  --ji-contrast: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,6 +53,10 @@
     --next-border: #5c2626;
     --yi: #66bb6a;
     --yi-bg: #1b3320;
+    --yi-contrast: #062b09;
+    --ji: #ce93d8;
+    --ji-bg: #3a1f42;
+    --ji-contrast: #2b0e33;
   }
 }
 
@@ -76,6 +84,10 @@
   --next-border: #5c2626;
   --yi: #66bb6a;
   --yi-bg: #1b3320;
+  --yi-contrast: #062b09;
+  --ji: #ce93d8;
+  --ji-bg: #3a1f42;
+  --ji-contrast: #2b0e33;
 }
 
 * { box-sizing: border-box; }
@@ -201,14 +213,28 @@ body {
   .cal-nav .today-btn { margin-left: 0.25rem; }
 }
 
+.activity-filters-wrap {
+  margin-bottom: 0.5rem;
+}
+.activity-filters__hint {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.activity-filters__status {
+  margin: 0.4rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--yi);
+  font-weight: 600;
+}
 .activity-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-bottom: 0.75rem;
 }
 .activity-chip {
-  padding: 0.25rem 0.7rem;
+  padding: 0.5rem 0.9rem;
+  min-height: 40px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--alt-bg);
@@ -371,37 +397,66 @@ body {
   font-weight: 700;
   color: #fff;
 }
-.almanac-label--yi { background: var(--yi); }
-.almanac-label--ji { background: var(--holiday); }
+.almanac-label--yi { background: var(--yi); color: var(--yi-contrast); }
+.almanac-label--ji { background: var(--ji); color: var(--ji-contrast); }
 .almanac-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
   padding-top: 0.15rem;
 }
+/* Rectangular + left color bar — deliberately distinct from the pill-shaped
+   .activity-chip buttons, since these tags are display-only, not clickable. */
 .almanac-tag {
   font-size: 0.8rem;
-  padding: 1px 8px;
-  border-radius: 999px;
+  padding: 1px 8px 1px 6px;
+  border-radius: 3px;
+  border-left: 3px solid transparent;
 }
-.almanac-tag--yi { background: var(--yi-bg); color: var(--yi); }
-.almanac-tag--ji { background: var(--holiday-bg); color: var(--holiday); }
-.almanac-tag--empty { background: var(--alt-bg); color: var(--muted); }
+.almanac-tag--yi { background: var(--yi-bg); color: var(--yi); border-left-color: var(--yi); }
+.almanac-tag--ji { background: var(--ji-bg); color: var(--ji); border-left-color: var(--ji); }
+.almanac-tag--empty { background: var(--alt-bg); color: var(--muted); border-left-color: transparent; }
+
+.almanac-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.6rem;
+  padding: 0.3rem 0;
+  background: none;
+  border: none;
+  color: var(--today);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.almanac-toggle__arrow { transition: transform 0.15s; display: inline-block; }
+.almanac-toggle--open .almanac-toggle__arrow { transform: rotate(180deg); }
+.almanac-detail { margin-top: 0.3rem; }
 
 .day-detail__facts {
   margin-top: 0.6rem;
+}
+.day-detail__facts::before {
+  content: '📖 科普';
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
 }
 .day-detail__facts .fact {
   margin: 0.3rem 0 0 0;
   padding: 0.5rem 0.7rem;
   background: var(--alt-bg);
-  border-left: 3px solid var(--today);
+  border-left: 3px solid var(--border);
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--muted);
   line-height: 1.6;
 }
 .day-detail__facts .fact strong { color: var(--text); }
+.day-detail__facts:empty::before { content: none; }
 
 .tools {
   display: flex;
