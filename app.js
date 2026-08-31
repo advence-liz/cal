@@ -12,7 +12,8 @@ import {
   formatDate,
   parseDate,
 } from './workday.js';
-import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, ACTIVITIES } from './calendar.js';
+import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, findNextSuitableDate, ACTIVITIES } from './calendar.js';
+import { ACTIVITY_TERM_INFO } from './almanac-info.js';
 
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
@@ -23,6 +24,7 @@ const state = {
   today: '',
   selected: '',
   activityTerm: '',
+  activityLabel: '',
 };
 
 function showBanner(msg, kind = 'warn') {
@@ -115,9 +117,9 @@ function showDayDetail(dateStr) {
 
   const yi = info.lunarInfo?.yi || [];
   const ji = info.lunarInfo?.ji || [];
-  $('almanacYi').innerHTML = yi.map((t) => `<span class="almanac-tag almanac-tag--yi">${t}</span>`).join('')
+  $('almanacYi').innerHTML = yi.map((t) => `<span class="almanac-tag almanac-tag--yi" data-term="${t}">${t}</span>`).join('')
     || '<span class="almanac-tag almanac-tag--empty">无</span>';
-  $('almanacJi').innerHTML = ji.map((t) => `<span class="almanac-tag almanac-tag--ji">${t}</span>`).join('')
+  $('almanacJi').innerHTML = ji.map((t) => `<span class="almanac-tag almanac-tag--ji" data-term="${t}">${t}</span>`).join('')
     || '<span class="almanac-tag almanac-tag--empty">无</span>';
 
   $('dayDetailFacts').innerHTML = describeDayFacts(info).map((f) =>
@@ -210,19 +212,39 @@ function bindActivityFilters() {
     const btn = e.target.closest('.activity-chip');
     if (!btn) return;
     const term = btn.dataset.term;
-    const label = btn.textContent;
     state.activityTerm = state.activityTerm === term ? '' : term;
+    state.activityLabel = state.activityTerm ? btn.textContent : '';
     container.querySelectorAll('.activity-chip').forEach((el) =>
       el.classList.toggle('activity-chip--active', el.dataset.term === state.activityTerm));
     renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm);
 
     const status = $('activityFiltersStatus');
     if (state.activityTerm) {
-      status.textContent = `当前显示：本月宜「${label}」的日子（绿框标出）`;
+      $('activityFiltersStatusText').textContent = `当前显示：本月宜「${state.activityLabel}」的日子（绿框标出）`;
       status.hidden = false;
     } else {
       status.hidden = true;
     }
+  });
+
+  $('activityFindBtn').addEventListener('click', async () => {
+    if (!state.activityTerm) return;
+    const btn = $('activityFindBtn');
+    btn.disabled = true;
+    btn.textContent = '查找中…';
+    const found = findNextSuitableDate(state.today, state.activityTerm, getDataStore());
+    btn.disabled = false;
+    btn.textContent = '找最近一天 →';
+    if (!found) {
+      $('activityFiltersStatusText').textContent = `两年内没找到宜「${state.activityLabel}」的日子，这不太可能，建议检查一下`;
+      return;
+    }
+    const d = parseDate(found);
+    await gotoMonth(d.getFullYear(), d.getMonth() + 1);
+    const cell = $('calGrid').querySelector(`[data-date="${found}"]`);
+    if (cell) selectDay(cell);
+    $('activityFiltersStatusText').textContent =
+      `距今最近的宜「${state.activityLabel}」是 ${found}（已跳转，绿框标出）`;
   });
 }
 
@@ -270,6 +292,76 @@ function bindCalendarSelect() {
       case 'ArrowUp': e.preventDefault(); moveFocus(cell, -7); break;
     }
   });
+}
+
+// --- 科普速览：hover/聚焦有📖标记的格子，或宜/忌标签，直接弹出简介——
+// 不用滚到底部详情面板才能看到，也不用猜"纳采"是什么意思 ---
+function bindDayPopover() {
+  const popover = $('dayPopover');
+  const grid = $('calGrid');
+  const detail = $('dayDetail');
+
+  function positionNear(el) {
+    const elRect = el.getBoundingClientRect();
+    const popRect = popover.getBoundingClientRect();
+    let top = elRect.bottom + 6;
+    if (top + popRect.height > window.innerHeight - 8) top = elRect.top - popRect.height - 6;
+    let left = elRect.left + elRect.width / 2 - popRect.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - popRect.width - 8));
+    popover.style.top = `${Math.max(8, top)}px`;
+    popover.style.left = `${left}px`;
+  }
+
+  function showHtml(el, html) {
+    if (!html) return;
+    popover.innerHTML = html;
+    popover.hidden = false;
+    positionNear(el);
+  }
+
+  function hide() { popover.hidden = true; }
+
+  function dayFactsHtml(dateStr) {
+    const facts = describeDayFacts(describeDay(dateStr, getDataStore()));
+    return facts.map((f) => `<p class="day-popover__fact"><strong>${f.term}</strong>：${f.blurb}</p>`).join('');
+  }
+
+  function termHtml(term) {
+    const blurb = ACTIVITY_TERM_INFO[term];
+    if (!blurb) return '';
+    return `<p class="day-popover__fact"><strong>${term}</strong>：${blurb}</p>`;
+  }
+
+  grid.addEventListener('mouseover', (e) => {
+    const cell = e.target.closest('.day--has-fact');
+    if (cell) showHtml(cell, dayFactsHtml(cell.dataset.date));
+  });
+  grid.addEventListener('mouseout', (e) => {
+    const cell = e.target.closest('.day--has-fact');
+    if (cell && !cell.contains(e.relatedTarget)) hide();
+  });
+  grid.addEventListener('focusin', (e) => {
+    const cell = e.target.closest('.day--has-fact');
+    if (cell) showHtml(cell, dayFactsHtml(cell.dataset.date));
+  });
+  grid.addEventListener('focusout', hide);
+
+  // 宜/忌术语解释：同一套弹层，触发源换成详情面板里的标签。
+  detail.addEventListener('mouseover', (e) => {
+    const tag = e.target.closest('.almanac-tag[data-term]');
+    if (tag) showHtml(tag, termHtml(tag.dataset.term));
+  });
+  detail.addEventListener('mouseout', (e) => {
+    const tag = e.target.closest('.almanac-tag[data-term]');
+    if (tag && !tag.contains(e.relatedTarget)) hide();
+  });
+  detail.addEventListener('click', (e) => {
+    const tag = e.target.closest('.almanac-tag[data-term]');
+    if (tag) showHtml(tag, termHtml(tag.dataset.term));
+  });
+
+  window.addEventListener('scroll', hide, { passive: true });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
 }
 
 // --- 深色模式：手动切换优先，否则跟随系统 prefers-color-scheme ---
@@ -329,6 +421,7 @@ async function init() {
   bindNav();
   bindActivityFilters();
   bindCalendarSelect();
+  bindDayPopover();
   bindCount();
   bindAdd();
   bindHashChange();

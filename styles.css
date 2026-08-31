@@ -222,11 +222,28 @@ body {
   color: var(--muted);
 }
 .activity-filters__status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin: 0.4rem 0 0 0;
   font-size: 0.8rem;
   color: var(--yi);
   font-weight: 600;
 }
+.activity-filters__status[hidden] { display: none; }
+.activity-find-btn {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--yi);
+  background: none;
+  color: var(--yi);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.activity-find-btn:hover { background: var(--yi-bg); }
+.activity-find-btn:disabled { opacity: 0.6; cursor: default; }
 .activity-filters {
   display: flex;
   flex-wrap: wrap;
@@ -339,6 +356,33 @@ body {
   background: var(--yi);
 }
 
+.fact-badge {
+  position: absolute;
+  bottom: 2px;
+  left: 3px;
+  font-size: 0.6rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.day-popover {
+  position: fixed;
+  z-index: 60;
+  max-width: 260px;
+  padding: 0.6rem 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+  pointer-events: none;
+}
+.day-popover__fact { margin: 0; }
+.day-popover__fact + .day-popover__fact { margin-top: 0.4rem; }
+.day-popover__fact strong { color: var(--text); }
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -406,13 +450,15 @@ body {
   padding-top: 0.15rem;
 }
 /* Rectangular + left color bar — deliberately distinct from the pill-shaped
-   .activity-chip buttons, since these tags are display-only, not clickable. */
+   .activity-chip buttons; these aren't a filter control, they're a glossary
+   lookup (hover/tap shows what the term means via #dayPopover). */
 .almanac-tag {
   font-size: 0.8rem;
   padding: 1px 8px 1px 6px;
   border-radius: 3px;
   border-left: 3px solid transparent;
 }
+.almanac-tag[data-term] { cursor: help; }
 .almanac-tag--yi { background: var(--yi-bg); color: var(--yi); border-left-color: var(--yi); }
 .almanac-tag--ji { background: var(--ji-bg); color: var(--ji); border-left-color: var(--ji); }
 .almanac-tag--empty { background: var(--alt-bg); color: var(--muted); border-left-color: transparent; }

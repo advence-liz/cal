@@ -1,4 +1,5 @@
-import { getMonthCells, monthTitle, describeDay, describeDayText, describeDayFacts, suitsActivity, ACTIVITIES } from './calendar.js';
+import { getMonthCells, monthTitle, describeDay, describeDayText, describeDayFacts, suitsActivity, findNextSuitableDate, ACTIVITIES } from './calendar.js';
+import { ACTIVITY_TERM_INFO } from './almanac-info.js';
 import { formatDate } from './workday.js';
 import { makeRunner } from './test-harness.js';
 
@@ -114,6 +115,20 @@ export function runTests() {
       eq(a.term.length > 0, true);
     }
     eq(info.lunarInfo.yi.length > 0, true);
+  });
+
+  check('18. findNextSuitableDate: 2026-10-01 之后最近一个宜出行的日子是 2026-10-02', () => {
+    eq(findNextSuitableDate('2026-10-01', '出行', makeStore()), '2026-10-02');
+  });
+
+  check('19. findNextSuitableDate: 空 term 找不到，返回 null', () => {
+    eq(findNextSuitableDate('2026-10-01', '', makeStore()), null);
+  });
+
+  check('20. ACTIVITY_TERM_INFO 覆盖了 ACTIVITIES 筛选栏用到的每一个词', () => {
+    for (const a of ACTIVITIES) {
+      eq(typeof ACTIVITY_TERM_INFO[a.term], 'string');
+    }
   });
 
   return results;
