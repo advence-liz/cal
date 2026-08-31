@@ -4,12 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>中国工作日历</title>
+  <meta name="theme-color" content="#1e88e5">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
     <h1>📅 中国工作日历</h1>
-    <div class="next-holiday" id="nextHoliday">加载中…</div>
+    <div class="topbar-right">
+      <div class="next-holiday" id="nextHoliday">加载中…</div>
+      <button id="themeToggle" type="button" class="theme-toggle" aria-label="切换深色模式">🌙</button>
+    </div>
   </header>
 
   <div class="banner" id="banner" hidden></div>
@@ -38,6 +45,11 @@
         <span><i class="dot dot--makeup"></i>调休补班</span>
         <span><i class="dot dot--weekend"></i>周末</span>
         <span><i class="dot dot--today"></i>今天</span>
+      </div>
+
+      <div class="day-detail" id="dayDetail" hidden>
+        <div class="day-detail__date" id="dayDetailDate"></div>
+        <ul class="day-detail__lines" id="dayDetailLines"></ul>
       </div>
     </section>
 
@@ -73,5 +85,12 @@
 
   <script src="vendor/lunar.js"></script>
   <script type="module" src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

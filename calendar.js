@@ -11,53 +11,83 @@ function dowMonFirst(date) {
   return (date.getDay() + 6) % 7;
 }
 
+// Pure grid math, no DOM — returns the 7-wide cell list for a month
+// (includes leading/trailing days from adjacent months to fill the grid).
+export function getMonthCells(year, month) {
+  const first = new Date(year, month - 1, 1);
+  const firstDow = dowMonFirst(first);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const prevDays = new Date(year, month - 1, 0).getDate();
+
+  const cells = [];
+  for (let i = firstDow - 1; i >= 0; i--) {
+    cells.push({ date: new Date(year, month - 2, prevDays - i), otherMonth: true });
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ date: new Date(year, month - 1, day), otherMonth: false });
+  }
+  const totalCells = firstDow + daysInMonth;
+  const trail = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= trail; i++) {
+    cells.push({ date: new Date(year, month, i), otherMonth: true });
+  }
+  return cells;
+}
+
+// Pure day lookup: holiday meta + weekday + lunar info for one date.
+// Shared by the grid cell (tooltip/tag) and the tap-to-view detail panel.
+export function describeDay(dateStr, dataStore) {
+  const dateObj = parseDate(dateStr);
+  const year = dateObj.getFullYear();
+  const yearMap = dataStore.get(year);
+  const meta = yearMap ? yearMap.get(dateStr) : undefined;
+  const dow = dateObj.getDay(); // 0 Sun ... 6 Sat
+
+  // Lunar year range is bounded (1900-2100 in vendor/lunar.js); dates near
+  // that edge should degrade to solar-only rather than throw.
+  let lunarInfo = null;
+  try {
+    lunarInfo = getDayInfo(dateStr);
+  } catch {
+    lunarInfo = null;
+  }
+
+  return { dateStr, dow, meta, lunarInfo };
+}
+
+// Human-readable summary lines for a describeDay() result.
+export function describeDayText(info) {
+  const lines = [];
+  if (info.meta) {
+    lines.push(info.meta.isOffDay ? `${info.meta.name} · 法定假` : `${info.meta.name} · 调休补班`);
+  } else if (info.dow === 0 || info.dow === 6) {
+    lines.push('周末');
+  } else {
+    lines.push('工作日');
+  }
+  if (info.lunarInfo) {
+    lines.push(`农历 ${info.lunarInfo.fullLabel}`);
+    if (info.lunarInfo.jieqi) lines.push(`节气：${info.lunarInfo.jieqi}`);
+    if (info.lunarInfo.festival) lines.push(`传统节日：${info.lunarInfo.festival}`);
+  }
+  return lines;
+}
+
 export function renderMonth(year, month, container, dataStore, todayStr, selectedStr) {
   // month is 1-12
   // Clear existing day cells, keep header (7 .cal-head)
   const heads = container.querySelectorAll('.cal-head');
   container.replaceChildren(...heads);
 
-  const first = new Date(year, month - 1, 1);
-  const firstDow = dowMonFirst(first); // how many blanks at start
-  const daysInMonth = new Date(year, month, 0).getDate();
-
-  // Prev-month tail
-  const prevDays = new Date(year, month - 1, 0).getDate();
-  for (let i = firstDow - 1; i >= 0; i--) {
-    const d = new Date(year, month - 2, prevDays - i);
-    container.appendChild(makeCell(d, dataStore, todayStr, true, selectedStr));
-  }
-
-  // Current month
-  for (let day = 1; day <= daysInMonth; day++) {
-    const d = new Date(year, month - 1, day);
-    container.appendChild(makeCell(d, dataStore, todayStr, false, selectedStr));
-  }
-
-  // Next-month head to complete 6x7 grid
-  const totalCells = firstDow + daysInMonth;
-  const trail = (7 - (totalCells % 7)) % 7;
-  for (let i = 1; i <= trail; i++) {
-    const d = new Date(year, month, i);
-    container.appendChild(makeCell(d, dataStore, todayStr, true, selectedStr));
+  for (const { date, otherMonth } of getMonthCells(year, month)) {
+    container.appendChild(makeCell(date, otherMonth, dataStore, todayStr, selectedStr));
   }
 }
 
-function makeCell(dateObj, dataStore, todayStr, otherMonth, selectedStr) {
+function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr) {
   const dateStr = formatDate(dateObj);
-  const year = dateObj.getFullYear();
-  const yearMap = dataStore.get(year);
-  const meta = yearMap ? yearMap.get(dateStr) : undefined;
-  const dow = dateObj.getDay(); // 0 Sun, 6 Sat
-
-  // Lunar year range is bounded (1900-2100 in vendor/lunar.js); other-month
-  // bleed near that edge should degrade to solar-only rather than throw.
-  let lunarInfo = null;
-  try {
-    lunarInfo = getDayInfo(dateStr);
-  } catch (err) {
-    lunarInfo = null;
-  }
+  const info = describeDay(dateStr, dataStore);
+  const { meta, dow, lunarInfo } = info;
 
   const cell = document.createElement('div');
   cell.className = 'day';
@@ -66,24 +96,12 @@ function makeCell(dateObj, dataStore, todayStr, otherMonth, selectedStr) {
   if (dateStr === todayStr) cell.classList.add('day--today');
   if (dateStr === selectedStr) cell.classList.add('day--selected');
 
-  const titleParts = [];
   if (meta) {
-    if (meta.isOffDay) {
-      cell.classList.add('day--holiday');
-      titleParts.push(`${meta.name} · 法定假`);
-    } else {
-      cell.classList.add('day--makeup');
-      titleParts.push(`${meta.name} · 调休补班`);
-    }
+    cell.classList.add(meta.isOffDay ? 'day--holiday' : 'day--makeup');
   } else if (dow === 0 || dow === 6) {
     cell.classList.add('day--weekend');
-    titleParts.push('周末');
   }
-  if (lunarInfo) {
-    titleParts.push(`农历 ${lunarInfo.fullLabel}`);
-    if (lunarInfo.jieqi) titleParts.push(`节气：${lunarInfo.jieqi}`);
-    if (lunarInfo.festival) titleParts.push(`传统节日：${lunarInfo.festival}`);
-  }
+  const titleParts = describeDayText(info);
   if (titleParts.length > 0) cell.title = titleParts.join(' · ');
 
   const num = document.createElement('span');
