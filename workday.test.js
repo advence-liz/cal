@@ -4,6 +4,7 @@ import {
   addWorkdays,
   nextHoliday,
 } from './workday.js';
+import { makeRunner } from './test-harness.js';
 
 function makeStore() {
   const store = new Map();
@@ -23,27 +24,8 @@ function makeStore() {
   return store;
 }
 
-const results = [];
-function check(name, fn) {
-  try {
-    fn();
-    results.push({ name, ok: true });
-  } catch (err) {
-    results.push({ name, ok: false, err: err.message });
-  }
-}
-function eq(actual, expected) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  if (a !== e) throw new Error(`expected ${e}, got ${a}`);
-}
-function throws(fn) {
-  let threw = false;
-  try { fn(); } catch { threw = true; }
-  if (!threw) throw new Error('expected to throw');
-}
-
 export function runTests() {
+  const { results, check, eq, throws } = makeRunner();
   const store = makeStore();
 
   check('1. isWorkday holiday (端午 6/19 Fri)', () =>

@@ -1,0 +1,14 @@
+{
+  "name": "中国工作日历",
+  "short_name": "工作日历",
+  "description": "标注法定节假日、调休上班日、农历的静态工作日历工具",
+  "lang": "zh-CN",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#1e88e5",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

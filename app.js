@@ -12,9 +12,10 @@ import {
   formatDate,
   parseDate,
 } from './workday.js';
-import { renderMonth, monthTitle } from './calendar.js';
+import { renderMonth, monthTitle, describeDay, describeDayText } from './calendar.js';
 
 const $ = (id) => document.getElementById(id);
+const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
 
 const state = {
   year: 0,
@@ -58,6 +59,22 @@ function reportLoadResults(results) {
   }
 }
 
+// --- URL 深链接：#YYYY-MM 或 #YYYY-MM-DD（含选中日）---
+function parseHash() {
+  const m = location.hash.match(/^#(\d{4})-(\d{2})(?:-(\d{2}))?$/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  return { year: Number(y), month: Number(mo), selected: d ? `${y}-${mo}-${d}` : '' };
+}
+
+function updateHash() {
+  const y = state.year;
+  const m = String(state.month).padStart(2, '0');
+  const monthKey = `${y}-${m}`;
+  const hash = state.selected.startsWith(monthKey) ? `#${state.selected}` : `#${monthKey}`;
+  history.replaceState(null, '', hash);
+}
+
 async function gotoMonth(year, month) {
   // Normalize Dec/Jan overflow.
   if (month < 1) { year--; month = 12; }
@@ -72,6 +89,7 @@ async function gotoMonth(year, month) {
 
   $('monthTitle').textContent = monthTitle(year, month);
   renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected);
+  updateHash();
 }
 
 function renderNextHoliday() {
@@ -84,6 +102,16 @@ function renderNextHoliday() {
   }
   el.innerHTML = `距 <strong>${result.name}</strong> 还有 <strong>${result.daysAway}</strong> 天 (${result.date})`;
   el.classList.add('has-data');
+}
+
+// --- 日期详情面板（tap-to-view，弥补移动端没有 title hover 的问题）---
+function showDayDetail(dateStr) {
+  const info = describeDay(dateStr, getDataStore());
+  const d = parseDate(dateStr);
+  $('dayDetailDate').textContent =
+    `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${WEEKDAY_CN[d.getDay()]}`;
+  $('dayDetailLines').innerHTML = describeDayText(info).map((l) => `<li>${l}</li>`).join('');
+  $('dayDetail').hidden = false;
 }
 
 function bindCount() {
@@ -169,25 +197,77 @@ function bindCalendarSelect() {
 
     $('calGrid').querySelectorAll('.day--selected').forEach((el) => el.classList.remove('day--selected'));
     cell.classList.add('day--selected');
+
+    showDayDetail(state.selected);
+    updateHash();
   });
+}
+
+// --- 深色模式：手动切换优先，否则跟随系统 prefers-color-scheme ---
+function bindTheme() {
+  const KEY = 'cal:theme';
+  const btn = $('themeToggle');
+  const apply = (mode) => {
+    if (mode) document.documentElement.dataset.theme = mode;
+    else delete document.documentElement.dataset.theme;
+    const isDark = mode === 'dark' ||
+      (!mode && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    btn.textContent = isDark ? '☀️' : '🌙';
+  };
+  apply(localStorage.getItem(KEY));
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.dataset.theme ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = current === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(KEY, next); } catch { /* ignore */ }
+    apply(next);
+  });
+}
+
+// Jump the view to whatever #YYYY-MM(-DD) is currently in the URL.
+// Shared by init() and the hashchange listener (e.g. a pasted deep link
+// while the app is already open — same-document hash nav doesn't reload).
+async function applyHashView(fallbackYear, fallbackMonth) {
+  const fromHash = parseHash();
+  const year = fromHash ? fromHash.year : fallbackYear;
+  const month = fromHash ? fromHash.month : fallbackMonth;
+  state.selected = fromHash?.selected || '';
+
+  await gotoMonth(year, month);
+  if (state.selected) {
+    const cell = $('calGrid').querySelector(`[data-date="${state.selected}"]`);
+    if (cell) {
+      cell.classList.add('day--selected');
+      showDayDetail(state.selected);
+    }
+  }
+}
+
+function bindHashChange() {
+  window.addEventListener('hashchange', () => applyHashView(state.year, state.month));
 }
 
 async function init() {
   state.today = todayStr();
   const t = parseDate(state.today);
-  const initialYear = t.getFullYear();
 
   // Prefill forms with sensible defaults.
   $('countForm').start.value = state.today;
   $('countForm').end.value = formatDate(new Date(t.getFullYear(), t.getMonth() + 1, 0));
   $('addForm').start.value = state.today;
 
+  bindTheme();
   bindNav();
   bindCalendarSelect();
   bindCount();
   bindAdd();
+  bindHashChange();
 
-  await gotoMonth(initialYear, t.getMonth() + 1);
+  await applyHashView(t.getFullYear(), t.getMonth() + 1);
+  if (state.selected) {
+    $('countForm').start.value = state.selected;
+    $('addForm').start.value = state.selected;
+  }
   renderNextHoliday();
 }
 

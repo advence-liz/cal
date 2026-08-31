@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>单元测试</title>
+  <style>
+    body { font-family: ui-monospace, monospace; padding: 1rem; max-width: 900px; }
+    .ok  { color: #2e7d32; }
+    .bad { color: #c62828; }
+    li { margin: .25rem 0; }
+    h2 { margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>单元测试</h1>
+  <p>纯函数 + 日历网格逻辑测试。所有项绿色即通过。</p>
+
+  <h2 id="summary-workday">workday.js — 运行中…</h2>
+  <ul id="out-workday"></ul>
+
+  <h2 id="summary-calendar">calendar.js — 运行中…</h2>
+  <ul id="out-calendar"></ul>
+
+  <h2 id="summary-lunar">lunar-adapter.js — 运行中…</h2>
+  <ul id="out-lunar"></ul>
+
+  <script src="vendor/lunar.js"></script>
+  <script type="module">
+    function render(prefix, results) {
+      const ul = document.getElementById(`out-${prefix}`);
+      let pass = 0;
+      for (const r of results) {
+        const li = document.createElement('li');
+        li.className = r.ok ? 'ok' : 'bad';
+        li.textContent = (r.ok ? '✓ ' : '✗ ') + r.name + (r.ok ? '' : ' — ' + r.err);
+        ul.appendChild(li);
+        if (r.ok) pass++;
+      }
+      const summary = document.getElementById(`summary-${prefix}`);
+      summary.textContent = `${prefix}.js — ${pass}/${results.length} 通过`;
+      summary.className = pass === results.length ? 'ok' : 'bad';
+      console.log(`[${prefix} tests] ${pass}/${results.length} pass`);
+    }
+
+    const [workday, calendar, lunar] = await Promise.all([
+      import('./workday.test.js'),
+      import('./calendar.test.js'),
+      import('./lunar.test.js'),
+    ]);
+    render('workday', workday.runTests());
+    render('calendar', calendar.runTests());
+    render('lunar', lunar.runTests());
+  </script>
+</body>
+</html>
