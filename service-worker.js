@@ -16,6 +16,7 @@ const SHELL_FILES = [
   './workday.js',
   './holidays.js',
   './lunar-adapter.js',
+  './almanac-info.js',
   './vendor/lunar.js',
   './manifest.json',
   './icon.svg',

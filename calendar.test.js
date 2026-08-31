@@ -1,4 +1,4 @@
-import { getMonthCells, monthTitle, describeDay, describeDayText, suitsActivity, ACTIVITIES } from './calendar.js';
+import { getMonthCells, monthTitle, describeDay, describeDayText, describeDayFacts, suitsActivity, ACTIVITIES } from './calendar.js';
 import { formatDate } from './workday.js';
 import { makeRunner } from './test-harness.js';
 
@@ -73,6 +73,23 @@ export function runTests() {
     const info = describeDay('2026-09-01', makeStore());
     const lines = describeDayText(info);
     eq(lines[0], '工作日');
+  });
+
+  check('15. describeDayFacts: 寒露节气有科普条目', () => {
+    const info = describeDay('2026-10-08', makeStore());
+    const facts = describeDayFacts(info);
+    eq(facts.some((f) => f.term === '寒露'), true);
+  });
+
+  check('16. describeDayFacts: 中秋节有科普条目', () => {
+    const info = describeDay('2026-09-25', makeStore());
+    const facts = describeDayFacts(info);
+    eq(facts.some((f) => f.term === '中秋节'), true);
+  });
+
+  check('17. describeDayFacts: 普通工作日没有科普条目', () => {
+    const info = describeDay('2026-09-01', makeStore());
+    eq(describeDayFacts(info).length, 0);
   });
 
   check('11. suitsActivity: 2026-10-01 是宜"出行"的日子', () => {

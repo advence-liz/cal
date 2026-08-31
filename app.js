@@ -12,7 +12,7 @@ import {
   formatDate,
   parseDate,
 } from './workday.js';
-import { renderMonth, monthTitle, describeDay, describeDayText, ACTIVITIES } from './calendar.js';
+import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, ACTIVITIES } from './calendar.js';
 
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
@@ -119,6 +119,10 @@ function showDayDetail(dateStr) {
     || '<span class="almanac-tag almanac-tag--empty">无</span>';
   $('almanacJi').innerHTML = ji.map((t) => `<span class="almanac-tag almanac-tag--ji">${t}</span>`).join('')
     || '<span class="almanac-tag almanac-tag--empty">无</span>';
+
+  $('dayDetailFacts').innerHTML = describeDayFacts(info).map((f) =>
+    `<p class="fact"><strong>${f.term}</strong>：${f.blurb}</p>`
+  ).join('');
 
   $('dayDetail').hidden = false;
 }
