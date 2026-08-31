@@ -124,7 +124,24 @@ function showDayDetail(dateStr) {
     `<p class="fact"><strong>${f.term}</strong>：${f.blurb}</p>`
   ).join('');
 
+  // Collapse the almanac section again on every new day selection — keeps
+  // the default view focused on "am I working today", per design review.
+  $('almanacDetail').hidden = true;
+  $('almanacToggle').setAttribute('aria-expanded', 'false');
+  $('almanacToggle').classList.remove('almanac-toggle--open');
+
   $('dayDetail').hidden = false;
+}
+
+function bindAlmanacToggle() {
+  const btn = $('almanacToggle');
+  const panel = $('almanacDetail');
+  btn.addEventListener('click', () => {
+    const open = panel.hidden;
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    btn.classList.toggle('almanac-toggle--open', open);
+  });
 }
 
 function bindCount() {
@@ -210,10 +227,19 @@ function bindActivityFilters() {
     const btn = e.target.closest('.activity-chip');
     if (!btn) return;
     const term = btn.dataset.term;
+    const label = btn.textContent;
     state.activityTerm = state.activityTerm === term ? '' : term;
     container.querySelectorAll('.activity-chip').forEach((el) =>
       el.classList.toggle('activity-chip--active', el.dataset.term === state.activityTerm));
     renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm);
+
+    const status = $('activityFiltersStatus');
+    if (state.activityTerm) {
+      status.textContent = `当前显示：本月宜「${label}」的日子（绿框标出）`;
+      status.hidden = false;
+    } else {
+      status.hidden = true;
+    }
   });
 }
 
@@ -320,6 +346,7 @@ async function init() {
   bindNav();
   bindActivityFilters();
   bindCalendarSelect();
+  bindAlmanacToggle();
   bindCount();
   bindAdd();
   bindHashChange();
