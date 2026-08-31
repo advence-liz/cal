@@ -1,4 +1,4 @@
-import { getMonthCells, monthTitle, describeDay, describeDayText } from './calendar.js';
+import { getMonthCells, monthTitle, describeDay, describeDayText, suitsActivity, ACTIVITIES } from './calendar.js';
 import { formatDate } from './workday.js';
 import { makeRunner } from './test-harness.js';
 
@@ -73,6 +73,30 @@ export function runTests() {
     const info = describeDay('2026-09-01', makeStore());
     const lines = describeDayText(info);
     eq(lines[0], '工作日');
+  });
+
+  check('11. suitsActivity: 2026-10-01 是宜"出行"的日子', () => {
+    const info = describeDay('2026-10-01', makeStore());
+    eq(suitsActivity(info, '出行'), true);
+  });
+
+  check('12. suitsActivity: 2026-10-01 不宜"嫁娶"（在忌里）', () => {
+    const info = describeDay('2026-10-01', makeStore());
+    eq(suitsActivity(info, '嫁娶'), false);
+  });
+
+  check('13. suitsActivity: 空 term 一律不高亮', () => {
+    const info = describeDay('2026-10-01', makeStore());
+    eq(suitsActivity(info, ''), false);
+  });
+
+  check('14. ACTIVITIES 里每个 term 都是真实黄历词条（跟当天宜/忌之一对得上或都不对，但不能是 undefined）', () => {
+    const info = describeDay('2026-10-01', makeStore());
+    for (const a of ACTIVITIES) {
+      eq(typeof a.term, 'string');
+      eq(a.term.length > 0, true);
+    }
+    eq(info.lunarInfo.yi.length > 0, true);
   });
 
   return results;
