@@ -6,6 +6,20 @@ import { getDayInfo } from './lunar-adapter.js';
 const MONTH_NAMES = ['一月', '二月', '三月', '四月', '五月', '六月',
                      '七月', '八月', '九月', '十月', '十一月', '十二月'];
 
+// Curated subset of the ~40-term almanac vocabulary, mapped to friendlier
+// labels. `term` must match lunar.js's getDayYi()/getDayJi() output exactly.
+export const ACTIVITIES = [
+  { label: '出行', term: '出行' },
+  { label: '搬家', term: '移徙' },
+  { label: '入宅', term: '入宅' },
+  { label: '结婚', term: '嫁娶' },
+  { label: '订婚', term: '订盟' },
+  { label: '开业', term: '开市' },
+  { label: '理发', term: '理发' },
+  { label: '装修', term: '动土' },
+  { label: '安床', term: '安床' },
+];
+
 function dowMonFirst(date) {
   // Mon=0 ... Sun=6
   return (date.getDay() + 6) % 7;
@@ -73,18 +87,23 @@ export function describeDayText(info) {
   return lines;
 }
 
-export function renderMonth(year, month, container, dataStore, todayStr, selectedStr) {
+// Does this day's 宜 (suitable) list include the given almanac term?
+export function suitsActivity(info, term) {
+  return !!term && !!info.lunarInfo && info.lunarInfo.yi.includes(term);
+}
+
+export function renderMonth(year, month, container, dataStore, todayStr, selectedStr, activityTerm = '') {
   // month is 1-12
   // Clear existing day cells, keep header (7 .cal-head)
   const heads = container.querySelectorAll('.cal-head');
   container.replaceChildren(...heads);
 
   for (const { date, otherMonth } of getMonthCells(year, month)) {
-    container.appendChild(makeCell(date, otherMonth, dataStore, todayStr, selectedStr));
+    container.appendChild(makeCell(date, otherMonth, dataStore, todayStr, selectedStr, activityTerm));
   }
 }
 
-function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr) {
+function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activityTerm) {
   const dateStr = formatDate(dateObj);
   const info = describeDay(dateStr, dataStore);
   const { meta, dow, lunarInfo } = info;
@@ -97,6 +116,7 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr) {
   if (otherMonth) cell.classList.add('day--other-month');
   if (dateStr === todayStr) cell.classList.add('day--today');
   if (dateStr === selectedStr) cell.classList.add('day--selected');
+  if (suitsActivity(info, activityTerm)) cell.classList.add('day--suits');
 
   if (meta) {
     cell.classList.add(meta.isOffDay ? 'day--holiday' : 'day--makeup');

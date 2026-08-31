@@ -29,5 +29,13 @@ export function runTests() {
     eq(typeof info.fullLabel, 'string');
   });
 
+  check('5. 2026-10-01 宜/忌列表（黄历吉凶）', () => {
+    const info = getDayInfo('2026-10-01');
+    eq(info.yi.includes('出行'), true);
+    eq(info.yi.includes('移徙'), true);
+    eq(info.ji.includes('嫁娶'), true);
+    eq(info.ji.includes('开市'), true);
+  });
+
   return results;
 }

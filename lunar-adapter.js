@@ -15,5 +15,7 @@ export function getDayInfo(dateStr) {
     fullLabel: `${lunar.getYearInGanZhi()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,
     jieqi: lunar.getJieQi() || '',
     festival: lunar.getFestivals()[0] || lunar.getOtherFestivals()[0] || '',
+    yi: lunar.getDayYi(),
+    ji: lunar.getDayJi(),
   };
 }

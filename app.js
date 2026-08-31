@@ -12,7 +12,7 @@ import {
   formatDate,
   parseDate,
 } from './workday.js';
-import { renderMonth, monthTitle, describeDay, describeDayText } from './calendar.js';
+import { renderMonth, monthTitle, describeDay, describeDayText, ACTIVITIES } from './calendar.js';
 
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
@@ -22,6 +22,7 @@ const state = {
   month: 0,
   today: '',
   selected: '',
+  activityTerm: '',
 };
 
 function showBanner(msg, kind = 'warn') {
@@ -88,7 +89,7 @@ async function gotoMonth(year, month) {
   if (results.length > 0) reportLoadResults(results);
 
   $('monthTitle').textContent = monthTitle(year, month);
-  renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected);
+  renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm);
   updateHash();
 }
 
@@ -111,6 +112,14 @@ function showDayDetail(dateStr) {
   $('dayDetailDate').textContent =
     `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${WEEKDAY_CN[d.getDay()]}`;
   $('dayDetailLines').innerHTML = describeDayText(info).map((l) => `<li>${l}</li>`).join('');
+
+  const yi = info.lunarInfo?.yi || [];
+  const ji = info.lunarInfo?.ji || [];
+  $('almanacYi').innerHTML = yi.map((t) => `<span class="almanac-tag almanac-tag--yi">${t}</span>`).join('')
+    || '<span class="almanac-tag almanac-tag--empty">无</span>';
+  $('almanacJi').innerHTML = ji.map((t) => `<span class="almanac-tag almanac-tag--ji">${t}</span>`).join('')
+    || '<span class="almanac-tag almanac-tag--empty">无</span>';
+
   $('dayDetail').hidden = false;
 }
 
@@ -183,6 +192,24 @@ function bindNav() {
     state.today = todayStr();
     const t = parseDate(state.today);
     gotoMonth(t.getFullYear(), t.getMonth() + 1);
+  });
+}
+
+// --- 活动筛选：点一个标签，高亮当月"宜"这件事的日子；再点一次取消 ---
+function bindActivityFilters() {
+  const container = $('activityFilters');
+  container.innerHTML = ACTIVITIES.map((a) =>
+    `<button type="button" class="activity-chip" data-term="${a.term}">${a.label}</button>`
+  ).join('');
+
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.activity-chip');
+    if (!btn) return;
+    const term = btn.dataset.term;
+    state.activityTerm = state.activityTerm === term ? '' : term;
+    container.querySelectorAll('.activity-chip').forEach((el) =>
+      el.classList.toggle('activity-chip--active', el.dataset.term === state.activityTerm));
+    renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm);
   });
 }
 
@@ -287,6 +314,7 @@ async function init() {
 
   bindTheme();
   bindNav();
+  bindActivityFilters();
   bindCalendarSelect();
   bindCount();
   bindAdd();

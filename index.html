@@ -40,6 +40,8 @@
         <button id="todayBtn" type="button" class="today-btn">回到今天</button>
       </div>
 
+      <div class="activity-filters" id="activityFilters" role="group" aria-label="按活动筛选宜办的日子"></div>
+
       <div class="cal-grid" id="calGrid">
         <div class="cal-head">一</div>
         <div class="cal-head">二</div>
@@ -55,11 +57,20 @@
         <span><i class="dot dot--makeup"></i>调休补班</span>
         <span><i class="dot dot--weekend"></i>周末</span>
         <span><i class="dot dot--today"></i>今天</span>
+        <span><i class="dot dot--suits"></i>宜（筛选中）</span>
       </div>
 
       <div class="day-detail" id="dayDetail" hidden>
         <div class="day-detail__date" id="dayDetailDate"></div>
         <ul class="day-detail__lines" id="dayDetailLines"></ul>
+        <div class="almanac-row almanac-row--yi">
+          <span class="almanac-label almanac-label--yi">宜</span>
+          <div class="almanac-tags" id="almanacYi"></div>
+        </div>
+        <div class="almanac-row almanac-row--ji">
+          <span class="almanac-label almanac-label--ji">忌</span>
+          <div class="almanac-tags" id="almanacJi"></div>
+        </div>
       </div>
     </section>
 
