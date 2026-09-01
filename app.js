@@ -34,6 +34,25 @@ function showBanner(msg, kind = 'warn') {
   b.dataset.kind = kind;
 }
 
+function hideBanner() {
+  $('banner').hidden = true;
+}
+
+// Turn one year's load outcome into a user-facing (non-technical) banner, or
+// null if that year's data is fine and any leftover banner should be cleared.
+function bannerForYearStatus(year, status, error) {
+  if (status === 'failed') {
+    if (error?.status === 404) {
+      return { msg: `ℹ️ ${year} 年度的法定节假日安排还没有公布，暂时按普通周末显示。`, kind: 'info' };
+    }
+    return { msg: `⚠️ 假期数据暂时获取不到，${year} 年的日历先按普通周末显示，网络恢复后会自动补上节假日安排。`, kind: 'warn' };
+  }
+  if (status === 'stale-cache') {
+    return { msg: `ℹ️ ${year} 年用的是之前保存的假期数据，可能不是最新的，网络恢复后会自动更新。`, kind: 'info' };
+  }
+  return null;
+}
+
 function todayStr() {
   return formatDate(new Date());
 }
@@ -45,20 +64,21 @@ async function ensureYears(years) {
 }
 
 function reportLoadResults(results) {
-  const failed = results.filter((r) => r.source === 'failed');
+  const failed = results.filter((r) => r.source === 'failed' && r.error?.status !== 404);
+  const unpublished = results.filter((r) => r.source === 'failed' && r.error?.status === 404);
   const stale = results.filter((r) => r.source === 'stale-cache');
-  const unpublished = failed.filter((r) => r.error?.status === 404);
 
-  if (failed.length === results.length && results.length > 0) {
-    showBanner('⚠️ 法定假期数据加载失败（CDN 不可达且无缓存）。月历仅按周末渲染。');
-    return;
-  }
-  if (unpublished.length > 0) {
+  if (failed.length > 0) {
+    const years = failed.map((r) => r.year).join('、');
+    showBanner(`⚠️ ${years} 年的假期数据暂时获取不到，这些年份先按普通周末计算，网络恢复后会自动更新。`);
+  } else if (unpublished.length > 0) {
     const years = unpublished.map((r) => r.year).join('、');
-    showBanner(`ℹ️ ${years} 年度法定假期数据尚未发布，该年仅显示周末。`);
+    showBanner(`ℹ️ ${years} 年度的法定节假日安排还没有公布，暂时按普通周末计算。`);
   } else if (stale.length > 0) {
     const years = stale.map((r) => r.year).join('、');
-    showBanner(`ℹ️ ${years} 年使用了离线缓存（网络异常）。数据可能不是最新。`);
+    showBanner(`ℹ️ ${years} 年用的是之前保存的假期数据，可能不是最新的，网络恢复后会自动更新。`);
+  } else {
+    hideBanner();
   }
 }
 
@@ -88,7 +108,15 @@ async function gotoMonth(year, month) {
   // Ensure data for displayed year + adjacent (other-month cells may bleed).
   const wanted = [year - 1, year, year + 1];
   const results = await ensureYears(wanted);
-  if (results.length > 0) reportLoadResults(results);
+
+  // The banner reflects the year actually on screen, not the whole prefetch
+  // batch — a still-failing neighbor year (e.g. next year's data not yet
+  // published) shouldn't keep flagging a perfectly fine displayed year, and
+  // switching back to a year that loaded fine must clear any old banner.
+  const displayedResult = results.find((r) => r.year === year);
+  const displayedStatus = displayedResult ? displayedResult.source : (hasYear(year) ? 'cache' : null);
+  const banner = bannerForYearStatus(year, displayedStatus, displayedResult?.error);
+  if (banner) showBanner(banner.msg, banner.kind); else hideBanner();
 
   $('monthTitle').textContent = monthTitle(year, month);
   renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm);
