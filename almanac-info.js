@@ -1,8 +1,9 @@
 // Local mini-encyclopedia for 节气/节日 shown in the day-detail panel.
 // Deliberately incomplete: only terms we're confident describing accurately
-// are included here. Obscure regional folk observances (分龙节/十成节/...)
-// are left out rather than risk inventing inaccurate history — describeFacts()
-// in calendar.js already degrades gracefully when a term has no entry.
+// are included here — e.g. 会龙节 is left out (couldn't find a reliable
+// source after checking Baidu Baike/Wikipedia/search engines) rather than
+// risk inventing inaccurate history. describeFacts() in calendar.js already
+// degrades gracefully when a term has no entry.
 
 export const JIEQI_INFO = {
   立春: '二十四节气之首，标志春季开始。此后白昼渐长，气温回升，民间有咬春、打春牛等习俗。',
@@ -69,6 +70,8 @@ export const FESTIVAL_INFO = {
   谷日: '农历正月初八，旧俗"正月初一到初十依次对应鸡狗猪羊牛马人谷"，初八为"谷日"，这天天气晴朗被认为预示当年稻谷丰收。',
   顺星节: '农历正月初八，民间传说这天是众星宿下界之日，需祭星祈福、消灾延寿，也称"祭星节"，与谷日是同一天的不同叫法。',
   驱傩日: '古代年终驱逐疫鬼的仪式性活动"大傩"，具体日期各朝代、各地说法不一，后世逐渐融入年终岁末的习俗中。',
+  隔开日: '农历正月初五，北方称"破五节"，因隔开了春节假期的诸多禁忌而得名——正月初一到初四的忌讳（如不能动刀剪、不能扫地）到这天全部解除。传说是武财神赵公明下凡之日，民间有迎财神、开市开工、吃饺子的习俗。',
+  十成节: '农历十月初十前后（各地日期略有出入），又称重十节、十月节、庆丰节，"十全十美"之意，是秋收后最完满的一天。中国南方部分地区及壮、彝、哈尼等多个民族都有对应的丰收庆典，习俗因地因民族而异。',
 };
 
 // Plain-language gloss for the ~40-term 宜/忌 vocabulary (lunar.js's
