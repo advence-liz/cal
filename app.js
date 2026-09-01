@@ -229,12 +229,14 @@ function formatLeaveDateLabel(dateStr) {
 
 function bindLeavePlan() {
   const out = $('leavePlanResult');
+  const teaser = $('leaveTeaser');
   let currentList = [];
 
   function renderList(list) {
     currentList = list;
     if (list.length === 0) {
       out.innerHTML = '<p class="hint">近期暂时没有查到法定节假日安排（可能还没公布），过阵子再来看看。</p>';
+      teaser.hidden = true;
       return;
     }
     out.innerHTML = list.map((row, idx) => {
@@ -261,6 +263,15 @@ function bindLeavePlan() {
         </div>
       `;
     }).join('') + '<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">清除标注</button>';
+
+    // 用最靠前的一条有加钱升级的机会做入口提示，放在日历上面，不用滚到底才发现有这功能。
+    const best = list.find((row) => row.recommended);
+    if (best) {
+      teaser.textContent = `🎉 ${best.recommended.names.join('+')}可以拼假：请 ${best.recommended.cost} 天连休 ${best.recommended.totalDays} 天 · 查看拼假攻略 →`;
+      teaser.hidden = false;
+    } else {
+      teaser.hidden = true;
+    }
   }
 
   async function load() {
@@ -270,6 +281,15 @@ function bindLeavePlan() {
     if (results.length > 0) reportLoadResults(results);
     renderList(suggestHolidayOpportunities(getDataStore(), { fromDate: state.today }));
   }
+
+  teaser.addEventListener('click', () => {
+    const card = $('leavePlanCard');
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.remove('tool-card--flash');
+    // Re-trigger the animation even if it just played.
+    void card.offsetWidth;
+    card.classList.add('tool-card--flash');
+  });
 
   out.addEventListener('click', async (e) => {
     if (e.target.closest('#leavePlanClearBtn')) {
@@ -284,6 +304,7 @@ function bindLeavePlan() {
     state.leaveDates = new Set(row.recommended.leaveDates);
     const jumpTo = parseDate(row.recommended.leaveDates[0] || row.recommended.start);
     await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1);
+    $('calGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
   load();
