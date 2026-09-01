@@ -363,6 +363,16 @@ body {
   border-radius: 50%;
   background: var(--yi);
 }
+.day--leave {
+  box-shadow: inset 0 0 0 2px var(--makeup);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(251, 140, 0, 0.08),
+    rgba(251, 140, 0, 0.08) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
 
 .fact-badge {
   position: absolute;
@@ -556,6 +566,56 @@ body {
 .result.ok strong { color: var(--today); font-size: 1.15em; }
 
 .hint { color: var(--muted); font-size: 0.8rem; }
+
+.leave-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.leave-plan {
+  padding: 0.5rem 0.65rem;
+  background: var(--alt-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.leave-plan__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.leave-plan__summary {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+}
+.leave-plan__summary strong { color: var(--makeup); }
+.leave-plan__dates {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.leave-plan__mark-btn {
+  margin-top: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--makeup);
+  background: none;
+  color: var(--makeup);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.leave-plan__mark-btn:hover { background: var(--makeup-bg); }
+.leave-plan__clear-btn {
+  align-self: flex-start;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.leave-plan__clear-btn:hover { background: var(--hover); }
 
 .foot {
   text-align: center;

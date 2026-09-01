@@ -24,6 +24,9 @@
   <h2 id="summary-lunar">lunar-adapter.js — 运行中…</h2>
   <ul id="out-lunar"></ul>
 
+  <h2 id="summary-bridge-plan">bridge-plan.js — 运行中…</h2>
+  <ul id="out-bridge-plan"></ul>
+
   <script src="vendor/lunar.js"></script>
   <script type="module">
     function render(prefix, results) {
@@ -42,14 +45,16 @@
       console.log(`[${prefix} tests] ${pass}/${results.length} pass`);
     }
 
-    const [workday, calendar, lunar] = await Promise.all([
+    const [workday, calendar, lunar, bridgePlan] = await Promise.all([
       import('./workday.test.js'),
       import('./calendar.test.js'),
       import('./lunar.test.js'),
+      import('./bridge-plan.test.js'),
     ]);
     render('workday', workday.runTests());
     render('calendar', calendar.runTests());
     render('lunar', lunar.runTests());
+    render('bridge-plan', bridgePlan.runTests());
   </script>
 </body>
 </html>
