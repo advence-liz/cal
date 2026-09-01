@@ -350,6 +350,7 @@ function bindLeavePlan() {
     const row = currentList[Number(btn.dataset.idx)];
     if (!row || !row.recommended) return;
     state.leaveDates = new Set(row.recommended.leaveDates);
+    deselectDay();
     const jumpTo = parseDate(row.recommended.leaveDates[0] || row.recommended.start);
     await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1);
     $('calGrid').scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
