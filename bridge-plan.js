@@ -5,6 +5,20 @@
 import { addDays, parseDate } from './workday.js';
 
 const MAX_HOPS = 4;
+export const DEFAULT_HORIZON_DAYS = 400;
+
+// Which calendar years does [fromDate, fromDate + horizonDays) actually
+// touch? Used to fetch exactly the years the opportunity scan will read —
+// no more (a stray "N+2 not published yet" banner for a year the scan never
+// looks at is just noise) and no less.
+export function yearsInRange(fromDate, horizonDays = DEFAULT_HORIZON_DAYS) {
+  const startYear = Number(fromDate.slice(0, 4));
+  const endYear = Number(addDays(fromDate, horizonDays - 1).slice(0, 4));
+  const years = [];
+  for (let y = startYear; y <= endYear; y++) years.push(y);
+  return years;
+}
+
 
 function dayInfo(dataStore, dateStr) {
   const year = Number(dateStr.slice(0, 4));
@@ -121,7 +135,7 @@ function reconstructPlan(segments, coreIdx, option) {
 // Holidays reached by bridging from either side collapse into one row keyed
 // by the resulting date range (bridging from 中秋 into 国庆 and bridging from
 // 国庆 into 中秋 land on the same block).
-export function suggestHolidayOpportunities(dataStore, { fromDate, horizonDays = 400, maxLeaveDays = Infinity } = {}) {
+export function suggestHolidayOpportunities(dataStore, { fromDate, horizonDays = DEFAULT_HORIZON_DAYS, maxLeaveDays = Infinity } = {}) {
   const segments = buildSegments(dataStore, fromDate, horizonDays);
   const coreIdxs = [];
   segments.forEach((seg, i) => { if (seg.off && seg.names.size > 0) coreIdxs.push(i); });

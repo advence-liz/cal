@@ -178,6 +178,17 @@ body {
 }
 .leave-teaser:hover { filter: brightness(0.97); }
 
+@media (max-width: 480px) {
+  .banner,
+  .leave-teaser {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 @keyframes tool-card-flash {
   0%, 100% { box-shadow: none; }
   30% { box-shadow: 0 0 0 3px var(--makeup); }
