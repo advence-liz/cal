@@ -14,7 +14,7 @@
   <meta name="twitter:description" content="标注法定节假日、调休补班日、农历的静态工作日历。">
   <meta name="twitter:image" content="icon-512.png">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self';">
-  <meta name="theme-color" content="#1e88e5">
+  <meta name="theme-color" content="#fafafa">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
@@ -22,14 +22,14 @@
 </head>
 <body>
   <header class="topbar">
-    <h1><img src="icon.svg" alt="" class="app-logo">中国工作日历</h1>
+    <h1><img src="icon.svg" alt="" class="app-logo" width="24" height="24">中国工作日历</h1>
     <div class="topbar-right">
       <div class="next-holiday" id="nextHoliday">加载中…</div>
       <button id="themeToggle" type="button" class="theme-toggle" aria-label="切换深色模式">🌙</button>
     </div>
   </header>
 
-  <div class="status-bar" id="statusBar" hidden></div>
+  <div class="status-bar" id="statusBar" role="status" aria-live="polite" hidden></div>
 
   <main class="main">
     <section class="cal-panel">
@@ -43,7 +43,7 @@
       <div class="activity-filters-wrap">
         <p class="activity-filters__hint">按活动看这个月宜办的日子：</p>
         <div class="activity-filters" id="activityFilters" role="group" aria-label="按活动筛选宜办的日子"></div>
-        <p class="activity-filters__status" id="activityFiltersStatus" hidden>
+        <p class="activity-filters__status" id="activityFiltersStatus" role="status" aria-live="polite" hidden>
           <span id="activityFiltersStatusText"></span>
           <button type="button" class="activity-find-btn" id="activityFindBtn">找最近一天 →</button>
         </p>
