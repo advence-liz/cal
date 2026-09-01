@@ -29,16 +29,55 @@ const state = {
   leaveDates: new Set(),
 };
 
+// Single top-of-page status slot shared by two unrelated senders: data-load
+// problems (banner) and the leave-plan teaser. They must never compete for
+// space — a real data problem always wins; the teaser reappears on its own
+// once the banner clears, no re-render needed from the leave-plan side.
+const statusBar = { banner: null, teaser: null };
+
+function renderStatusBar() {
+  const el = $('statusBar');
+  if (statusBar.banner) {
+    el.innerHTML = '';
+    el.textContent = statusBar.banner.msg;
+    el.title = statusBar.banner.msg;
+    el.dataset.kind = statusBar.banner.kind;
+    el.hidden = false;
+  } else if (statusBar.teaser) {
+    el.innerHTML = '';
+    el.title = '';
+    el.dataset.kind = 'teaser';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'status-bar__teaser-btn';
+    btn.textContent = statusBar.teaser.msg;
+    btn.addEventListener('click', statusBar.teaser.onClick);
+    el.appendChild(btn);
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+    el.innerHTML = '';
+  }
+}
+
 function showBanner(msg, kind = 'warn') {
-  const b = $('banner');
-  b.textContent = msg;
-  b.title = msg;
-  b.hidden = false;
-  b.dataset.kind = kind;
+  statusBar.banner = { msg, kind };
+  renderStatusBar();
 }
 
 function hideBanner() {
-  $('banner').hidden = true;
+  statusBar.banner = null;
+  renderStatusBar();
+}
+
+function setLeaveTeaser(msg, onClick) {
+  statusBar.teaser = { msg, onClick };
+  renderStatusBar();
+}
+
+function clearLeaveTeaser() {
+  statusBar.teaser = null;
+  renderStatusBar();
 }
 
 // Turn one year's load outcome into a user-facing (non-technical) banner, or
@@ -122,6 +161,7 @@ async function gotoMonth(year, month) {
   if (banner) showBanner(banner.msg, banner.kind); else hideBanner();
 
   $('monthTitle').textContent = monthTitle(year, month);
+  $('monthTitleMobile').textContent = `${year}年${month}月`;
   renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
   updateHash();
 }
@@ -230,14 +270,22 @@ function formatLeaveDateLabel(dateStr) {
 
 function bindLeavePlan() {
   const out = $('leavePlanResult');
-  const teaser = $('leaveTeaser');
   let currentList = [];
+
+  function flashLeavePlanCard() {
+    const card = $('leavePlanCard');
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.remove('tool-card--flash');
+    // Re-trigger the animation even if it just played.
+    void card.offsetWidth;
+    card.classList.add('tool-card--flash');
+  }
 
   function renderList(list) {
     currentList = list;
     if (list.length === 0) {
       out.innerHTML = '<p class="hint">近期暂时没有查到法定节假日安排（可能还没公布），过阵子再来看看。</p>';
-      teaser.hidden = true;
+      clearLeaveTeaser();
       return;
     }
     out.innerHTML = list.map((row, idx) => {
@@ -268,10 +316,12 @@ function bindLeavePlan() {
     // 用最靠前的一条有加钱升级的机会做入口提示，放在日历上面，不用滚到底才发现有这功能。
     const best = list.find((row) => row.recommended);
     if (best) {
-      teaser.textContent = `🎉 ${best.recommended.names.join('+')}请 ${best.recommended.cost} 天连休 ${best.recommended.totalDays} 天 →`;
-      teaser.hidden = false;
+      setLeaveTeaser(
+        `🎉 ${best.recommended.names.join('+')}请 ${best.recommended.cost} 天连休 ${best.recommended.totalDays} 天 →`,
+        flashLeavePlanCard
+      );
     } else {
-      teaser.hidden = true;
+      clearLeaveTeaser();
     }
   }
 
@@ -281,15 +331,6 @@ function bindLeavePlan() {
     if (results.length > 0) reportLoadResults(results);
     renderList(suggestHolidayOpportunities(getDataStore(), { fromDate: state.today }));
   }
-
-  teaser.addEventListener('click', () => {
-    const card = $('leavePlanCard');
-    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    card.classList.remove('tool-card--flash');
-    // Re-trigger the animation even if it just played.
-    void card.offsetWidth;
-    card.classList.add('tool-card--flash');
-  });
 
   out.addEventListener('click', async (e) => {
     if (e.target.closest('#leavePlanClearBtn')) {
@@ -317,6 +358,25 @@ function bindNav() {
     state.today = todayStr();
     const t = parseDate(state.today);
     gotoMonth(t.getFullYear(), t.getMonth() + 1);
+  });
+
+  // Mobile-only sticky bottom bar — same actions, duplicated so the reach
+  // doesn't require scrolling back to the top of a long page.
+  $('prevMonthMobile').addEventListener('click', () => gotoMonth(state.year, state.month - 1));
+  $('nextMonthMobile').addEventListener('click', () => gotoMonth(state.year, state.month + 1));
+  $('todayBtnMobile').addEventListener('click', () => {
+    state.today = todayStr();
+    const t = parseDate(state.today);
+    gotoMonth(t.getFullYear(), t.getMonth() + 1);
+  });
+}
+
+// Opening "更多工具" can reveal a form right where the fixed mobile nav bar
+// sits — scroll it into view so the newly shown fields aren't stuck under it.
+function bindToolsAccordion() {
+  const details = $('toolsMore');
+  details.addEventListener('toggle', () => {
+    if (details.open) details.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
 
@@ -544,6 +604,7 @@ async function init() {
   bindCount();
   bindAdd();
   bindLeavePlan();
+  bindToolsAccordion();
   bindHashChange();
 
   await applyHashView(t.getFullYear(), t.getMonth() + 1);

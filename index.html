@@ -29,8 +29,7 @@
     </div>
   </header>
 
-  <div class="banner" id="banner" hidden></div>
-  <button type="button" class="leave-teaser" id="leaveTeaser" hidden></button>
+  <div class="status-bar" id="statusBar" hidden></div>
 
   <main class="main">
     <section class="cal-panel">
@@ -88,34 +87,46 @@
     </section>
 
     <aside class="tools">
-      <article class="tool-card" id="leavePlanCard">
-        <h3>拼假攻略 [机智]</h3>
+      <article class="tool-card tool-card--featured" id="leavePlanCard">
+        <h3>🎉 拼假攻略</h3>
         <div class="leave-plan-list" id="leavePlanResult"></div>
         <small class="hint">近期每个法定节假日性价比最高的拼假方式，自动列出。</small>
       </article>
 
-      <article class="tool-card">
-        <h3>区间工作日数</h3>
-        <form id="countForm">
-          <label>起：<input type="date" name="start" required></label>
-          <label>止：<input type="date" name="end" required></label>
-          <button type="submit">计算</button>
-        </form>
-        <output class="result" id="countResult"></output>
-      </article>
+      <details class="tool-card tools-more" id="toolsMore">
+        <summary>更多工具</summary>
+        <div class="tools-more__body">
+          <div class="tool-sub">
+            <h4>区间工作日数</h4>
+            <form id="countForm">
+              <label>起：<input type="date" name="start" required></label>
+              <label>止：<input type="date" name="end" required></label>
+              <button type="submit">计算</button>
+            </form>
+            <output class="result" id="countResult"></output>
+          </div>
 
-      <article class="tool-card">
-        <h3>N 个工作日后</h3>
-        <form id="addForm">
-          <label>起：<input type="date" name="start" required></label>
-          <label>N：<input type="number" name="n" required step="1" value="5"></label>
-          <button type="submit">计算</button>
-        </form>
-        <output class="result" id="addResult"></output>
-        <small class="hint">N 可为负（向前数）。N=0 返回起始日本身。</small>
-      </article>
+          <div class="tool-sub">
+            <h4>N 个工作日后</h4>
+            <form id="addForm">
+              <label>起：<input type="date" name="start" required></label>
+              <label>N：<input type="number" name="n" required step="1" value="5"></label>
+              <button type="submit">计算</button>
+            </form>
+            <output class="result" id="addResult"></output>
+            <small class="hint">N 可为负（向前数）。N=0 返回起始日本身。</small>
+          </div>
+        </div>
+      </details>
     </aside>
   </main>
+
+  <div class="mobile-nav-bar" id="mobileNavBar">
+    <button id="prevMonthMobile" type="button" aria-label="上月">‹</button>
+    <span id="monthTitleMobile">—</span>
+    <button id="nextMonthMobile" type="button" aria-label="下月">›</button>
+    <button id="todayBtnMobile" type="button">今天</button>
+  </div>
 
   <footer class="foot">
     数据源：
