@@ -119,18 +119,18 @@ export function findNextSuitableDate(fromDateStr, term, dataStore, maxDays = 730
   return null;
 }
 
-export function renderMonth(year, month, container, dataStore, todayStr, selectedStr, activityTerm = '') {
+export function renderMonth(year, month, container, dataStore, todayStr, selectedStr, activityTerm = '', leaveDates = null) {
   // month is 1-12
   // Clear existing day cells, keep header (7 .cal-head)
   const heads = container.querySelectorAll('.cal-head');
   container.replaceChildren(...heads);
 
   for (const { date, otherMonth } of getMonthCells(year, month)) {
-    container.appendChild(makeCell(date, otherMonth, dataStore, todayStr, selectedStr, activityTerm));
+    container.appendChild(makeCell(date, otherMonth, dataStore, todayStr, selectedStr, activityTerm, leaveDates));
   }
 }
 
-function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activityTerm) {
+function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activityTerm, leaveDates) {
   const dateStr = formatDate(dateObj);
   const info = describeDay(dateStr, dataStore);
   const { meta, dow, lunarInfo } = info;
@@ -144,6 +144,7 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
   if (dateStr === todayStr) cell.classList.add('day--today');
   if (dateStr === selectedStr) cell.classList.add('day--selected');
   if (suitsActivity(info, activityTerm)) cell.classList.add('day--suits');
+  if (leaveDates && leaveDates.has(dateStr)) cell.classList.add('day--leave');
 
   const facts = describeDayFacts(info);
   if (facts.length > 0) cell.classList.add('day--has-fact');
@@ -154,6 +155,7 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
     cell.classList.add('day--weekend');
   }
   const titleParts = describeDayText(info);
+  if (leaveDates && leaveDates.has(dateStr)) titleParts.push('拼假攻略：建议请假');
   if (titleParts.length > 0) {
     cell.title = titleParts.join(' · ');
     cell.setAttribute('aria-label', `${dateStr} ${titleParts.join('，')}`);

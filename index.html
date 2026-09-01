@@ -107,6 +107,16 @@
         <output class="result" id="addResult"></output>
         <small class="hint">N 可为负（向前数）。N=0 返回起始日本身。</small>
       </article>
+
+      <article class="tool-card">
+        <h3>拼假攻略 [机智]</h3>
+        <form id="leavePlanForm">
+          <label>可用年假天数：<input type="number" name="budget" required min="1" step="1" value="3"></label>
+          <button type="submit">生成方案</button>
+        </form>
+        <div class="leave-plan-list" id="leavePlanResult"></div>
+        <small class="hint">从今天算起，找出用这些天数请假能拼出的最长连休。</small>
+      </article>
     </aside>
   </main>
 

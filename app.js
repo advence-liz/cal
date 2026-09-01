@@ -14,6 +14,7 @@ import {
 } from './workday.js';
 import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, findNextSuitableDate, ACTIVITIES } from './calendar.js';
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
+import { suggestLeavePlans } from './bridge-plan.js';
 
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
@@ -25,6 +26,7 @@ const state = {
   selected: '',
   activityTerm: '',
   activityLabel: '',
+  leaveDates: new Set(),
 };
 
 function showBanner(msg, kind = 'warn') {
@@ -119,7 +121,7 @@ async function gotoMonth(year, month) {
   if (banner) showBanner(banner.msg, banner.kind); else hideBanner();
 
   $('monthTitle').textContent = monthTitle(year, month);
-  renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm);
+  renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
   updateHash();
 }
 
@@ -219,6 +221,62 @@ function bindAdd() {
   });
 }
 
+// --- 拼假攻略：给定可用年假天数，找出哪个假期"搭把手"划算 ---
+function formatLeaveDateLabel(dateStr) {
+  const d = parseDate(dateStr);
+  return `${d.getMonth() + 1}月${d.getDate()}日(周${WEEKDAY_CN[d.getDay()]})`;
+}
+
+function bindLeavePlan() {
+  const form = $('leavePlanForm');
+  const out = $('leavePlanResult');
+  let currentPlans = [];
+
+  function renderPlans(plans) {
+    currentPlans = plans;
+    if (plans.length === 0) {
+      out.innerHTML = '<p class="hint">这个天数暂时拼不出更划算的假期，试试加几天，或者过阵子再来看看。</p>';
+      return;
+    }
+    out.innerHTML = plans.map((p, idx) => `
+      <div class="leave-plan">
+        <div class="leave-plan__title">${p.names.join(' + ')}</div>
+        <div class="leave-plan__summary">请假 <strong>${p.cost}</strong> 天，连休 <strong>${p.totalDays}</strong> 天（${p.start} ~ ${p.end}）</div>
+        <div class="leave-plan__dates">需请假：${p.leaveDates.map(formatLeaveDateLabel).join('、')}</div>
+        <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">在日历中标出 →</button>
+      </div>
+    `).join('') + '<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">清除标注</button>';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const budget = Number(form.budget.value);
+    if (!Number.isFinite(budget) || budget <= 0) {
+      out.innerHTML = '<p class="hint">请输入大于 0 的可用天数</p>';
+      return;
+    }
+    const todayYear = Number(state.today.slice(0, 4));
+    const results = await ensureYears([todayYear, todayYear + 1, todayYear + 2]);
+    if (results.length > 0) reportLoadResults(results);
+    renderPlans(suggestLeavePlans(getDataStore(), { fromDate: state.today, budget }));
+  });
+
+  out.addEventListener('click', async (e) => {
+    if (e.target.closest('#leavePlanClearBtn')) {
+      state.leaveDates = new Set();
+      renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
+      return;
+    }
+    const btn = e.target.closest('.leave-plan__mark-btn');
+    if (!btn) return;
+    const plan = currentPlans[Number(btn.dataset.idx)];
+    if (!plan) return;
+    state.leaveDates = new Set(plan.leaveDates);
+    const jumpTo = parseDate(plan.leaveDates[0] || plan.start);
+    await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1);
+  });
+}
+
 function bindNav() {
   $('prevMonth').addEventListener('click', () => gotoMonth(state.year, state.month - 1));
   $('nextMonth').addEventListener('click', () => gotoMonth(state.year, state.month + 1));
@@ -244,7 +302,7 @@ function bindActivityFilters() {
     state.activityLabel = state.activityTerm ? btn.textContent : '';
     container.querySelectorAll('.activity-chip').forEach((el) =>
       el.classList.toggle('activity-chip--active', el.dataset.term === state.activityTerm));
-    renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm);
+    renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
 
     const status = $('activityFiltersStatus');
     if (state.activityTerm) {
@@ -452,6 +510,7 @@ async function init() {
   bindDayPopover();
   bindCount();
   bindAdd();
+  bindLeavePlan();
   bindHashChange();
 
   await applyHashView(t.getFullYear(), t.getMonth() + 1);
