@@ -358,10 +358,20 @@ function bindLeavePlan() {
   load();
 }
 
+// Navigating to a different month invalidates whatever day was selected —
+// otherwise the detail panel stays frozen on the old day (possibly one that
+// isn't even part of the new month's grid) and a stray other-month bleed
+// cell can end up wrongly marked .day--selected.
+function deselectDay() {
+  state.selected = '';
+  $('dayDetail').hidden = true;
+}
+
 function bindNav() {
-  $('prevMonth').addEventListener('click', () => gotoMonth(state.year, state.month - 1));
-  $('nextMonth').addEventListener('click', () => gotoMonth(state.year, state.month + 1));
+  $('prevMonth').addEventListener('click', () => { deselectDay(); gotoMonth(state.year, state.month - 1); });
+  $('nextMonth').addEventListener('click', () => { deselectDay(); gotoMonth(state.year, state.month + 1); });
   $('todayBtn').addEventListener('click', () => {
+    deselectDay();
     state.today = todayStr();
     const t = parseDate(state.today);
     gotoMonth(t.getFullYear(), t.getMonth() + 1);
@@ -369,9 +379,10 @@ function bindNav() {
 
   // Mobile-only sticky bottom bar — same actions, duplicated so the reach
   // doesn't require scrolling back to the top of a long page.
-  $('prevMonthMobile').addEventListener('click', () => gotoMonth(state.year, state.month - 1));
-  $('nextMonthMobile').addEventListener('click', () => gotoMonth(state.year, state.month + 1));
+  $('prevMonthMobile').addEventListener('click', () => { deselectDay(); gotoMonth(state.year, state.month - 1); });
+  $('nextMonthMobile').addEventListener('click', () => { deselectDay(); gotoMonth(state.year, state.month + 1); });
   $('todayBtnMobile').addEventListener('click', () => {
+    deselectDay();
     state.today = todayStr();
     const t = parseDate(state.today);
     gotoMonth(t.getFullYear(), t.getMonth() + 1);
