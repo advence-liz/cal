@@ -232,13 +232,16 @@ function bindLeavePlan() {
   const out = $('leavePlanResult');
   let currentPlans = [];
 
-  function renderPlans(plans) {
+  function renderPlans(plans, budget) {
     currentPlans = plans;
     if (plans.length === 0) {
-      out.innerHTML = '<p class="hint">这个天数暂时拼不出更划算的假期，试试加几天，或者过阵子再来看看。</p>';
+      out.innerHTML = `<p class="hint">${budget} 天暂时拼不出更划算的假期，试试加几天，或者过阵子再来看看。</p>`;
       return;
     }
-    out.innerHTML = plans.map((p, idx) => `
+    const leftover = plans[0].cost < budget
+      ? `<p class="leave-plan__unused">可用 ${budget} 天里，这个方案只用到 ${plans[0].cost} 天，剩下 ${budget - plans[0].cost} 天可以留给别的假期。</p>`
+      : '';
+    out.innerHTML = `<p class="hint">可用 ${budget} 天，找到 ${plans.length} 个拼假机会：</p>${leftover}` + plans.map((p, idx) => `
       <div class="leave-plan">
         <div class="leave-plan__title">${p.names.join(' + ')}</div>
         <div class="leave-plan__summary">请假 <strong>${p.cost}</strong> 天，连休 <strong>${p.totalDays}</strong> 天（${p.start} ~ ${p.end}）</div>
@@ -258,7 +261,7 @@ function bindLeavePlan() {
     const todayYear = Number(state.today.slice(0, 4));
     const results = await ensureYears([todayYear, todayYear + 1, todayYear + 2]);
     if (results.length > 0) reportLoadResults(results);
-    renderPlans(suggestLeavePlans(getDataStore(), { fromDate: state.today, budget }));
+    renderPlans(suggestLeavePlans(getDataStore(), { fromDate: state.today, budget }), budget);
   });
 
   out.addEventListener('click', async (e) => {

@@ -573,6 +573,12 @@ body {
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
+.leave-plan-list > .hint { margin: 0; }
+.leave-plan__unused {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--makeup);
+}
 .leave-plan {
   padding: 0.5rem 0.65rem;
   background: var(--alt-bg);
