@@ -16,6 +16,25 @@ import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
 import { suggestHolidayOpportunities, yearsInRange } from './bridge-plan.js';
 
+// 微信内置浏览器允许缩放时，用户一旦双指缩放就会弹出微信自己的缩放控件
+// （这是 WeChat WebView 的行为，控件本身我们改不了）。只对微信 UA 关掉
+// 这个页面在微信里的缩放能力来避免触发它；Safari/Chrome 等浏览器的无障
+// 碍缩放能力完全不受影响，不能图省事直接全局禁用缩放。
+if (/MicroMessenger/i.test(navigator.userAgent)) {
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (viewport) viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+
+  // 同一个坑的另一半：微信"跟随系统字体大小"会整体缩放页面文字，效果跟
+  // 缩放控件一样突兀，用官方 JSBridge 把这页锁死在标准字号。
+  const lockFontSize = () => {
+    if (!window.WeixinJSBridge?.invoke) return;
+    WeixinJSBridge.invoke('setFontSizeCallback', { fontSize: 0 });
+    WeixinJSBridge.on('menu:setfont', () => WeixinJSBridge.invoke('setFontSizeCallback', { fontSize: 0 }));
+  };
+  if (window.WeixinJSBridge) lockFontSize();
+  else document.addEventListener('WeixinJSBridgeReady', lockFontSize);
+}
+
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
 
