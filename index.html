@@ -111,11 +111,11 @@
       <article class="tool-card">
         <h3>拼假攻略 [机智]</h3>
         <form id="leavePlanForm">
-          <label>可用年假天数：<input type="number" name="budget" required min="1" step="1" value="3"></label>
-          <button type="submit">生成方案</button>
+          <label>最多愿意请几天：<input type="number" name="budget" min="0" step="1" placeholder="不填 = 不限"></label>
+          <button type="submit">筛选</button>
         </form>
         <div class="leave-plan-list" id="leavePlanResult"></div>
-        <small class="hint">从今天算起，找出用这些天数请假能拼出的最长连休。</small>
+        <small class="hint">默认列出近期每个法定节假日最划算的拼假方式；填个数字可以只看你请得起的方案。</small>
       </article>
     </aside>
   </main>
