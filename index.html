@@ -30,6 +30,7 @@
   </header>
 
   <div class="banner" id="banner" hidden></div>
+  <button type="button" class="leave-teaser" id="leaveTeaser" hidden></button>
 
   <main class="main">
     <section class="cal-panel">
@@ -87,6 +88,12 @@
     </section>
 
     <aside class="tools">
+      <article class="tool-card" id="leavePlanCard">
+        <h3>拼假攻略 [机智]</h3>
+        <div class="leave-plan-list" id="leavePlanResult"></div>
+        <small class="hint">近期每个法定节假日性价比最高的拼假方式，自动列出。</small>
+      </article>
+
       <article class="tool-card">
         <h3>区间工作日数</h3>
         <form id="countForm">
@@ -106,12 +113,6 @@
         </form>
         <output class="result" id="addResult"></output>
         <small class="hint">N 可为负（向前数）。N=0 返回起始日本身。</small>
-      </article>
-
-      <article class="tool-card">
-        <h3>拼假攻略 [机智]</h3>
-        <div class="leave-plan-list" id="leavePlanResult"></div>
-        <small class="hint">近期每个法定节假日性价比最高的拼假方式，自动列出。</small>
       </article>
     </aside>
   </main>

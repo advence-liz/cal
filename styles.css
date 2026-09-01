@@ -162,6 +162,28 @@ body {
   font-size: 0.9rem;
 }
 
+.leave-teaser {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 1.5rem;
+  background: var(--makeup-bg);
+  border: none;
+  border-bottom: 1px solid var(--warn-border);
+  color: var(--makeup);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.leave-teaser:hover { filter: brightness(0.97); }
+
+@keyframes tool-card-flash {
+  0%, 100% { box-shadow: none; }
+  30% { box-shadow: 0 0 0 3px var(--makeup); }
+}
+.tool-card--flash { animation: tool-card-flash 1.1s ease-out; }
+
 .main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
@@ -602,24 +624,26 @@ body {
 }
 .leave-plan__mark-btn {
   margin-top: 0.4rem;
-  padding: 0.25rem 0.6rem;
+  min-height: 44px;
+  padding: 0.25rem 0.9rem;
   border-radius: 999px;
   border: 1px solid var(--makeup);
   background: none;
   color: var(--makeup);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
 }
 .leave-plan__mark-btn:hover { background: var(--makeup-bg); }
 .leave-plan__clear-btn {
   align-self: flex-start;
-  padding: 0.25rem 0.6rem;
+  min-height: 44px;
+  padding: 0.25rem 0.9rem;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: none;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   cursor: pointer;
 }
 .leave-plan__clear-btn:hover { background: var(--hover); }
