@@ -371,15 +371,6 @@ function bindNav() {
   });
 }
 
-// Opening "更多工具" can reveal a form right where the fixed mobile nav bar
-// sits — scroll it into view so the newly shown fields aren't stuck under it.
-function bindToolsAccordion() {
-  const details = $('toolsMore');
-  details.addEventListener('toggle', () => {
-    if (details.open) details.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-}
-
 // --- 活动筛选：点一个标签，高亮当月"宜"这件事的日子；再点一次取消 ---
 function bindActivityFilters() {
   const container = $('activityFilters');
@@ -604,7 +595,6 @@ async function init() {
   bindCount();
   bindAdd();
   bindLeavePlan();
-  bindToolsAccordion();
   bindHashChange();
 
   await applyHashView(t.getFullYear(), t.getMonth() + 1);
