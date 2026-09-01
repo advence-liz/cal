@@ -574,11 +574,6 @@ body {
   margin-top: 0.6rem;
 }
 .leave-plan-list > .hint { margin: 0; }
-.leave-plan__unused {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--makeup);
-}
 .leave-plan {
   padding: 0.5rem 0.65rem;
   background: var(--alt-bg);
@@ -589,11 +584,17 @@ body {
   font-weight: 600;
   font-size: 0.9rem;
 }
+.leave-plan__natural {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
 .leave-plan__summary {
-  margin-top: 0.2rem;
+  margin-top: 0.3rem;
   font-size: 0.85rem;
 }
 .leave-plan__summary strong { color: var(--makeup); }
+.leave-plan .hint { margin-top: 0.3rem; }
 .leave-plan__dates {
   margin-top: 0.2rem;
   font-size: 0.78rem;

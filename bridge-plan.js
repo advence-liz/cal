@@ -1,6 +1,6 @@
-// "拼假攻略" — given a leave-day budget, find the short work-gaps next to
-// public holidays worth bridging with annual leave to form one long
-// consecutive break. Pure logic, no DOM.
+// "拼假攻略" — browse upcoming public holidays and see, for each one, the
+// most cost-effective way to bridge an adjacent work-gap with annual leave
+// into one long consecutive break. Pure logic, no DOM.
 
 import { addDays, parseDate } from './workday.js';
 
@@ -60,35 +60,42 @@ function buildChain(segments, coreIdx, direction) {
   return options;
 }
 
-function bestComboForCore(segments, coreIdx, budget) {
+// Every (cost, gain) combo reachable by combining a left-chain hop count with
+// a right-chain hop count, reduced to the Pareto frontier: cost ascending,
+// gain strictly increasing (drops combos a cheaper option already beats).
+function paretoOptions(segments, coreIdx) {
   const leftOpts = buildChain(segments, coreIdx, -1);
   const rightOpts = buildChain(segments, coreIdx, 1);
-  let best = null;
+  const all = [];
   for (const l of leftOpts) {
     for (const r of rightOpts) {
-      const cost = l.cost + r.cost;
-      if (cost > budget) continue;
-      const gain = l.gain + r.gain;
-      if (!best || gain > best.gain || (gain === best.gain && cost < best.cost)) {
-        best = { cost, gain, leftTouched: l.touched, rightTouched: r.touched };
-      }
+      all.push({ cost: l.cost + r.cost, gain: l.gain + r.gain, leftTouched: l.touched, rightTouched: r.touched });
     }
   }
-  return best;
+  all.sort((a, b) => a.cost - b.cost || b.gain - a.gain);
+  const pareto = [];
+  let bestGain = -1;
+  for (const opt of all) {
+    if (opt.gain > bestGain) {
+      pareto.push(opt);
+      bestGain = opt.gain;
+    }
+  }
+  return pareto; // first entry is always {cost: 0, gain: 0} — the natural, unpaid block.
 }
 
 function daysBetweenInclusive(start, end) {
   return Math.round((parseDate(end) - parseDate(start)) / 86400000) + 1;
 }
 
-function reconstructPlan(segments, coreIdx, best) {
-  const allIdx = [...best.leftTouched, coreIdx, ...best.rightTouched].sort((a, b) => a - b);
+function reconstructPlan(segments, coreIdx, option) {
+  const allIdx = [...option.leftTouched, coreIdx, ...option.rightTouched].sort((a, b) => a - b);
   const start = segments[allIdx[0]].dates[0];
   const endSeg = segments[allIdx[allIdx.length - 1]];
   const end = endSeg.dates[endSeg.dates.length - 1];
 
   const leaveDates = [];
-  for (const i of [...best.leftTouched, ...best.rightTouched]) {
+  for (const i of [...option.leftTouched, ...option.rightTouched]) {
     if (!segments[i].off) leaveDates.push(...segments[i].dates);
   }
   leaveDates.sort();
@@ -102,33 +109,52 @@ function reconstructPlan(segments, coreIdx, best) {
     start,
     end,
     totalDays: daysBetweenInclusive(start, end),
-    cost: best.cost,
+    cost: option.cost,
     leaveDates,
     names: [...names],
   };
 }
 
-// Returns plans sorted by resulting streak length (desc), deduped by exact
-// date range — a holiday reached by bridging from either side is the same
-// plan regardless of which named holiday "core" it was found from.
-export function suggestLeavePlans(dataStore, { fromDate, budget, horizonDays = 400, maxResults = 8 }) {
-  if (!(budget > 0)) return [];
-
+// One row per upcoming holiday: what you get for free, and — capped at
+// maxLeaveDays if given — the single most cost-effective (days-off per
+// leave-day) paid upgrade, if any exists within that cap.
+// Holidays reached by bridging from either side collapse into one row keyed
+// by the resulting date range (bridging from 中秋 into 国庆 and bridging from
+// 国庆 into 中秋 land on the same block).
+export function suggestHolidayOpportunities(dataStore, { fromDate, horizonDays = 400, maxLeaveDays = Infinity } = {}) {
   const segments = buildSegments(dataStore, fromDate, horizonDays);
   const coreIdxs = [];
   segments.forEach((seg, i) => { if (seg.off && seg.names.size > 0) coreIdxs.push(i); });
 
-  const plansByKey = new Map();
+  const cap = maxLeaveDays > 0 ? maxLeaveDays : 0;
+  const byKey = new Map();
+
   for (const coreIdx of coreIdxs) {
-    const best = bestComboForCore(segments, coreIdx, budget);
-    if (!best || best.cost === 0) continue; // nothing worth spending leave on here
-    const plan = reconstructPlan(segments, coreIdx, best);
-    const key = `${plan.start}_${plan.end}`;
-    const existing = plansByKey.get(key);
-    if (!existing || plan.cost < existing.cost) plansByKey.set(key, plan);
+    const pareto = paretoOptions(segments, coreIdx);
+    const natural = reconstructPlan(segments, coreIdx, pareto[0]);
+
+    const affordable = pareto.filter((o) => o.cost > 0 && o.cost <= cap);
+    const recommended = affordable.length === 0
+      ? null
+      : reconstructPlan(segments, coreIdx, affordable.reduce((best, o) =>
+          (o.gain / o.cost > best.gain / best.cost ? o : best)));
+
+    const key = recommended ? `${recommended.start}_${recommended.end}` : `${natural.start}_${natural.end}`;
+    const existing = byKey.get(key);
+    if (!existing || natural.totalDays > existing.naturalDays) {
+      byKey.set(key, {
+        naturalStart: natural.start,
+        naturalEnd: natural.end,
+        naturalDays: natural.totalDays,
+        naturalNames: natural.names,
+        recommended,
+      });
+    }
   }
 
-  return [...plansByKey.values()]
-    .sort((a, b) => b.totalDays - a.totalDays || a.cost - b.cost)
-    .slice(0, maxResults);
+  return [...byKey.values()].sort((a, b) => {
+    const aStart = a.recommended ? a.recommended.start : a.naturalStart;
+    const bStart = b.recommended ? b.recommended.start : b.naturalStart;
+    return aStart.localeCompare(bStart);
+  });
 }

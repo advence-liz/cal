@@ -14,7 +14,7 @@ import {
 } from './workday.js';
 import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, findNextSuitableDate, ACTIVITIES } from './calendar.js';
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
-import { suggestLeavePlans } from './bridge-plan.js';
+import { suggestHolidayOpportunities } from './bridge-plan.js';
 
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
@@ -221,7 +221,7 @@ function bindAdd() {
   });
 }
 
-// --- 拼假攻略：给定可用年假天数，找出哪个假期"搭把手"划算 ---
+// --- 拼假攻略：浏览近期每个法定节假日的自然连休 + 最划算的加钱升级 ---
 function formatLeaveDateLabel(dateStr) {
   const d = parseDate(dateStr);
   return `${d.getMonth() + 1}月${d.getDate()}日(周${WEEKDAY_CN[d.getDay()]})`;
@@ -230,38 +230,56 @@ function formatLeaveDateLabel(dateStr) {
 function bindLeavePlan() {
   const form = $('leavePlanForm');
   const out = $('leavePlanResult');
-  let currentPlans = [];
+  let currentList = [];
 
-  function renderPlans(plans, budget) {
-    currentPlans = plans;
-    if (plans.length === 0) {
-      out.innerHTML = `<p class="hint">${budget} 天暂时拼不出更划算的假期，试试加几天，或者过阵子再来看看。</p>`;
+  function renderList(list) {
+    currentList = list;
+    if (list.length === 0) {
+      out.innerHTML = '<p class="hint">未来一段时间内暂时没有查到法定节假日安排（可能还没公布），过阵子再来看看。</p>';
       return;
     }
-    const leftover = plans[0].cost < budget
-      ? `<p class="leave-plan__unused">可用 ${budget} 天里，这个方案只用到 ${plans[0].cost} 天，剩下 ${budget - plans[0].cost} 天可以留给别的假期。</p>`
-      : '';
-    out.innerHTML = `<p class="hint">可用 ${budget} 天，找到 ${plans.length} 个拼假机会：</p>${leftover}` + plans.map((p, idx) => `
-      <div class="leave-plan">
-        <div class="leave-plan__title">${p.names.join(' + ')}</div>
-        <div class="leave-plan__summary">请假 <strong>${p.cost}</strong> 天，连休 <strong>${p.totalDays}</strong> 天（${p.start} ~ ${p.end}）</div>
-        <div class="leave-plan__dates">需请假：${p.leaveDates.map(formatLeaveDateLabel).join('、')}</div>
-        <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">在日历中标出 →</button>
-      </div>
-    `).join('') + '<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">清除标注</button>';
+    out.innerHTML = list.map((row, idx) => {
+      const names = (row.recommended ? row.recommended.names : row.naturalNames).join(' + ');
+      const naturalLine = `<div class="leave-plan__natural">不请假：连休 ${row.naturalDays} 天（${row.naturalStart} ~ ${row.naturalEnd}）</div>`;
+      if (!row.recommended) {
+        return `
+          <div class="leave-plan">
+            <div class="leave-plan__title">${names}</div>
+            ${naturalLine}
+            <p class="hint">附近没找到更划算的加钱机会，或者超出了你设的天数上限。</p>
+          </div>
+        `;
+      }
+      const r = row.recommended;
+      const ratio = (r.totalDays / r.cost).toFixed(1);
+      return `
+        <div class="leave-plan">
+          <div class="leave-plan__title">${names}</div>
+          ${naturalLine}
+          <div class="leave-plan__summary">请假 <strong>${r.cost}</strong> 天 → 连休 <strong>${r.totalDays}</strong> 天（${r.start} ~ ${r.end}），划算 <strong>${ratio}</strong> 倍</div>
+          <div class="leave-plan__dates">需请假：${r.leaveDates.map(formatLeaveDateLabel).join('、')}</div>
+          <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">在日历中标出 →</button>
+        </div>
+      `;
+    }).join('') + '<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">清除标注</button>';
   }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const budget = Number(form.budget.value);
-    if (!Number.isFinite(budget) || budget <= 0) {
-      out.innerHTML = '<p class="hint">请输入大于 0 的可用天数</p>';
-      return;
-    }
+  async function loadAndRender(maxLeaveDays) {
+    out.innerHTML = '<p class="hint">加载中…</p>';
     const todayYear = Number(state.today.slice(0, 4));
     const results = await ensureYears([todayYear, todayYear + 1, todayYear + 2]);
     if (results.length > 0) reportLoadResults(results);
-    renderPlans(suggestLeavePlans(getDataStore(), { fromDate: state.today, budget }), budget);
+    renderList(suggestHolidayOpportunities(getDataStore(), { fromDate: state.today, maxLeaveDays }));
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const raw = form.budget.value.trim();
+    if (raw !== '' && !Number.isFinite(Number(raw))) {
+      out.innerHTML = '<p class="hint">请输入一个数字，或者留空表示不限</p>';
+      return;
+    }
+    loadAndRender(raw === '' ? Infinity : Number(raw));
   });
 
   out.addEventListener('click', async (e) => {
@@ -272,12 +290,14 @@ function bindLeavePlan() {
     }
     const btn = e.target.closest('.leave-plan__mark-btn');
     if (!btn) return;
-    const plan = currentPlans[Number(btn.dataset.idx)];
-    if (!plan) return;
-    state.leaveDates = new Set(plan.leaveDates);
-    const jumpTo = parseDate(plan.leaveDates[0] || plan.start);
+    const row = currentList[Number(btn.dataset.idx)];
+    if (!row || !row.recommended) return;
+    state.leaveDates = new Set(row.recommended.leaveDates);
+    const jumpTo = parseDate(row.recommended.leaveDates[0] || row.recommended.start);
     await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1);
   });
+
+  loadAndRender(Infinity);
 }
 
 function bindNav() {
