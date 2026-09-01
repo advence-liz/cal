@@ -19,6 +19,13 @@ import { suggestHolidayOpportunities, yearsInRange } from './bridge-plan.js';
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
 
+// CSS `scroll-behavior` can't override a `behavior: 'smooth'` passed
+// explicitly to scrollIntoView() — respecting prefers-reduced-motion for
+// these JS-driven scrolls has to happen here instead.
+function scrollBehavior() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+}
+
 const state = {
   year: 0,
   month: 0,
@@ -174,7 +181,7 @@ function renderNextHoliday() {
     el.classList.remove('has-data');
     return;
   }
-  el.innerHTML = `距 <strong>${result.name}</strong> 还有 <strong>${result.daysAway}</strong> 天 (${result.date})`;
+  el.innerHTML = `距 <strong>${result.name}</strong> 还有 <strong>${result.daysAway}</strong>&nbsp;天 (${result.date})`;
   el.classList.add('has-data');
 }
 
@@ -274,7 +281,7 @@ function bindLeavePlan() {
 
   function flashLeavePlanCard() {
     const card = $('leavePlanCard');
-    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     card.classList.remove('tool-card--flash');
     // Re-trigger the animation even if it just played.
     void card.offsetWidth;
@@ -290,7 +297,7 @@ function bindLeavePlan() {
     }
     out.innerHTML = list.map((row, idx) => {
       const names = (row.recommended ? row.recommended.names : row.naturalNames).join(' + ');
-      const naturalLine = `<div class="leave-plan__natural">不请假：连休 ${row.naturalDays} 天（${row.naturalStart} ~ ${row.naturalEnd}）</div>`;
+      const naturalLine = `<div class="leave-plan__natural">不请假：连休 ${row.naturalDays}&nbsp;天（${row.naturalStart} ~ ${row.naturalEnd}）</div>`;
       if (!row.recommended) {
         return `
           <div class="leave-plan">
@@ -306,7 +313,7 @@ function bindLeavePlan() {
         <div class="leave-plan">
           <div class="leave-plan__title">${names}</div>
           ${naturalLine}
-          <div class="leave-plan__summary">请假 <strong>${r.cost}</strong> 天 → 连休 <strong>${r.totalDays}</strong> 天（${r.start} ~ ${r.end}），划算 <strong>${ratio}</strong> 倍</div>
+          <div class="leave-plan__summary">请假 <strong>${r.cost}</strong>&nbsp;天 → 连休 <strong>${r.totalDays}</strong>&nbsp;天（${r.start} ~ ${r.end}），平均每请&nbsp;1&nbsp;天换 <strong>${ratio}</strong>&nbsp;天连休</div>
           <div class="leave-plan__dates">需请假：${r.leaveDates.map(formatLeaveDateLabel).join('、')}</div>
           <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">在日历中标出 →</button>
         </div>
@@ -345,7 +352,7 @@ function bindLeavePlan() {
     state.leaveDates = new Set(row.recommended.leaveDates);
     const jumpTo = parseDate(row.recommended.leaveDates[0] || row.recommended.start);
     await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1);
-    $('calGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('calGrid').scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
   });
 
   load();
@@ -538,12 +545,16 @@ function bindDayPopover() {
 function bindTheme() {
   const KEY = 'cal:theme';
   const btn = $('themeToggle');
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
   const apply = (mode) => {
     if (mode) document.documentElement.dataset.theme = mode;
     else delete document.documentElement.dataset.theme;
     const isDark = mode === 'dark' ||
       (!mode && window.matchMedia('(prefers-color-scheme: dark)').matches);
     btn.textContent = isDark ? '☀️' : '🌙';
+    // <meta name="theme-color"> doesn't react to data-theme/media changes on
+    // its own — keep it synced so the mobile browser chrome matches --bg.
+    themeColorMeta.content = isDark ? '#121212' : '#fafafa';
   };
   apply(localStorage.getItem(KEY));
   btn.addEventListener('click', () => {
