@@ -577,6 +577,7 @@ function bindTheme() {
   const KEY = 'cal:theme';
   const btn = $('themeToggle');
   const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  const colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
   const apply = (mode) => {
     if (mode) document.documentElement.dataset.theme = mode;
     else delete document.documentElement.dataset.theme;
@@ -586,6 +587,12 @@ function bindTheme() {
     // <meta name="theme-color"> doesn't react to data-theme/media changes on
     // its own — keep it synced so the mobile browser chrome matches --bg.
     themeColorMeta.content = isDark ? '#121212' : '#fafafa';
+    // Once the user has explicitly picked a theme via this button, assert it
+    // with `only` (stronger than `light dark`) — a clearer "I already chose,
+    // don't second-guess me" signal for any renderer that respects
+    // color-scheme at all. Following the system keeps `light dark` so native
+    // form controls still track the OS preference.
+    colorSchemeMeta.content = mode ? `only ${mode}` : 'light dark';
   };
   apply(localStorage.getItem(KEY));
   btn.addEventListener('click', () => {
