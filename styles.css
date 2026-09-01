@@ -324,6 +324,24 @@ body {
   font-weight: 600;
 }
 
+@media (max-width: 820px) {
+  /* 9 个筛选项换行铺开在小屏上占三行，改成单行横向滑动——最后一个
+     chip 露半个边正好提示"还能往右滑"，不用额外加箭头/渐隐提示。 */
+  .activity-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -1.25rem;
+    padding: 0 1.25rem 0.2rem;
+  }
+  .activity-filters::-webkit-scrollbar { display: none; }
+  .activity-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
