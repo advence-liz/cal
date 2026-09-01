@@ -228,14 +228,13 @@ function formatLeaveDateLabel(dateStr) {
 }
 
 function bindLeavePlan() {
-  const form = $('leavePlanForm');
   const out = $('leavePlanResult');
   let currentList = [];
 
   function renderList(list) {
     currentList = list;
     if (list.length === 0) {
-      out.innerHTML = '<p class="hint">未来一段时间内暂时没有查到法定节假日安排（可能还没公布），过阵子再来看看。</p>';
+      out.innerHTML = '<p class="hint">近期暂时没有查到法定节假日安排（可能还没公布），过阵子再来看看。</p>';
       return;
     }
     out.innerHTML = list.map((row, idx) => {
@@ -246,7 +245,7 @@ function bindLeavePlan() {
           <div class="leave-plan">
             <div class="leave-plan__title">${names}</div>
             ${naturalLine}
-            <p class="hint">附近没找到更划算的加钱机会，或者超出了你设的天数上限。</p>
+            <p class="hint">附近没有能再拼的工作日缺口，这已经是自然最长的连休了。</p>
           </div>
         `;
       }
@@ -264,23 +263,13 @@ function bindLeavePlan() {
     }).join('') + '<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">清除标注</button>';
   }
 
-  async function loadAndRender(maxLeaveDays) {
+  async function load() {
     out.innerHTML = '<p class="hint">加载中…</p>';
     const todayYear = Number(state.today.slice(0, 4));
     const results = await ensureYears([todayYear, todayYear + 1, todayYear + 2]);
     if (results.length > 0) reportLoadResults(results);
-    renderList(suggestHolidayOpportunities(getDataStore(), { fromDate: state.today, maxLeaveDays }));
+    renderList(suggestHolidayOpportunities(getDataStore(), { fromDate: state.today }));
   }
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const raw = form.budget.value.trim();
-    if (raw !== '' && !Number.isFinite(Number(raw))) {
-      out.innerHTML = '<p class="hint">请输入一个数字，或者留空表示不限</p>';
-      return;
-    }
-    loadAndRender(raw === '' ? Infinity : Number(raw));
-  });
 
   out.addEventListener('click', async (e) => {
     if (e.target.closest('#leavePlanClearBtn')) {
@@ -297,7 +286,7 @@ function bindLeavePlan() {
     await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1);
   });
 
-  loadAndRender(Infinity);
+  load();
 }
 
 function bindNav() {
