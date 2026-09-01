@@ -1,4 +1,4 @@
-import { suggestHolidayOpportunities } from './bridge-plan.js';
+import { suggestHolidayOpportunities, yearsInRange } from './bridge-plan.js';
 import { makeRunner } from './test-harness.js';
 
 // 中秋(9-25~9-27) + 3 天工作日缺口(9-28~9-30) + 国庆(10-1~10-7)：
@@ -68,6 +68,19 @@ export function runTests() {
     for (let i = 1; i < list.length; i++) {
       eq(list[i - 1].naturalStart <= list[i].naturalStart, true);
     }
+  });
+
+  check('7. yearsInRange: 起点和终点同一年时只返回一年', () => {
+    eq(yearsInRange('2026-09-01', 30), [2026]);
+  });
+
+  check('8. yearsInRange: 跨年时把两年都算进去（不多算一年）', () => {
+    // 400 天从 9-01 起大约落在次年 10 月，不应该碰到再下一年。
+    eq(yearsInRange('2026-09-01', 400), [2026, 2027]);
+  });
+
+  check('9. yearsInRange: 从年底起跨两个年头，会覆盖三个年份', () => {
+    eq(yearsInRange('2026-12-31', 400), [2026, 2027, 2028]);
   });
 
   return results;

@@ -14,7 +14,7 @@ import {
 } from './workday.js';
 import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, findNextSuitableDate, ACTIVITIES } from './calendar.js';
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
-import { suggestHolidayOpportunities } from './bridge-plan.js';
+import { suggestHolidayOpportunities, yearsInRange } from './bridge-plan.js';
 
 const $ = (id) => document.getElementById(id);
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
@@ -32,6 +32,7 @@ const state = {
 function showBanner(msg, kind = 'warn') {
   const b = $('banner');
   b.textContent = msg;
+  b.title = msg;
   b.hidden = false;
   b.dataset.kind = kind;
 }
@@ -267,7 +268,7 @@ function bindLeavePlan() {
     // 用最靠前的一条有加钱升级的机会做入口提示，放在日历上面，不用滚到底才发现有这功能。
     const best = list.find((row) => row.recommended);
     if (best) {
-      teaser.textContent = `🎉 ${best.recommended.names.join('+')}可以拼假：请 ${best.recommended.cost} 天连休 ${best.recommended.totalDays} 天 · 查看拼假攻略 →`;
+      teaser.textContent = `🎉 ${best.recommended.names.join('+')}请 ${best.recommended.cost} 天连休 ${best.recommended.totalDays} 天 →`;
       teaser.hidden = false;
     } else {
       teaser.hidden = true;
@@ -276,8 +277,7 @@ function bindLeavePlan() {
 
   async function load() {
     out.innerHTML = '<p class="hint">加载中…</p>';
-    const todayYear = Number(state.today.slice(0, 4));
-    const results = await ensureYears([todayYear, todayYear + 1, todayYear + 2]);
+    const results = await ensureYears(yearsInRange(state.today));
     if (results.length > 0) reportLoadResults(results);
     renderList(suggestHolidayOpportunities(getDataStore(), { fromDate: state.today }));
   }
