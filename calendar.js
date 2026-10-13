@@ -84,6 +84,7 @@ export function describeDayText(info) {
     lines.push(`农历 ${info.lunarInfo.fullLabel}`);
     if (info.lunarInfo.jieqi) lines.push(`节气：${info.lunarInfo.jieqi}`);
     if (info.lunarInfo.festival) lines.push(`传统节日：${info.lunarInfo.festival}`);
+    if (info.lunarInfo.solarFestival) lines.push(`节日：${info.lunarInfo.solarFestival}`);
   }
   return lines;
 }
@@ -171,8 +172,8 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
   let tagKind = '';
   if (meta) {
     tagText = meta.isOffDay ? meta.name : '班';
-  } else if (lunarInfo && lunarInfo.festival) {
-    tagText = lunarInfo.festival;
+  } else if (lunarInfo && (lunarInfo.festival || lunarInfo.solarFestival)) {
+    tagText = lunarInfo.festival || lunarInfo.solarFestival;
     tagKind = 'festival';
   } else if (lunarInfo && lunarInfo.jieqi) {
     tagText = lunarInfo.jieqi;

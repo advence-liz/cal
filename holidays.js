@@ -19,7 +19,9 @@ function readCache(year) {
   try {
     const raw = localStorage.getItem(cacheKey(year));
     if (!raw) return null;
-    return JSON.parse(raw);
+    const cached = JSON.parse(raw);
+    // Ignore empty caches (year placeholder cached before the schedule was published).
+    return cached?.days?.length ? cached : null;
   } catch {
     return null;
   }
@@ -52,7 +54,15 @@ async function fetchYear(year) {
     throw err;
   }
   const json = await res.json();
-  return json.days || [];
+  const days = json.days || [];
+  // Upstream publishes a placeholder file (days: []) before the State Council
+  // announces the schedule; treat it the same as "not published yet".
+  if (days.length === 0) {
+    const err = new Error('schedule not published');
+    err.status = 404;
+    throw err;
+  }
+  return days;
 }
 
 // Load one year: cache (if fresh) → network → stale cache fallback.
