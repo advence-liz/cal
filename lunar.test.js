@@ -37,5 +37,13 @@ export function runTests() {
     eq(info.ji.includes('开市'), true);
   });
 
+  check('6. 公历法定节日不依赖官方数据：2027 元旦/劳动节/国庆有标签，普通日为空', () => {
+    eq(getDayInfo('2027-01-01').solarFestival, '元旦节');
+    eq(getDayInfo('2027-05-01').solarFestival, '劳动节');
+    eq(getDayInfo('2027-10-01').solarFestival, '国庆节');
+    eq(getDayInfo('2027-12-25').solarFestival, ''); // 圣诞等非法定节日不上标签
+    eq(getDayInfo('2027-02-06').festival, '春节');
+  });
+
   return results;
 }
