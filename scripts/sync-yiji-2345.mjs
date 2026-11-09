@@ -73,9 +73,31 @@ for (const ds of DATES) {
 }
 
 // ---------- crawl 2345 from page context ----------
+// The page is ad-heavy and very slow from non-CN IPs (GitHub runners timed
+// out at 60s), so we only need the document itself for origin/cookie
+// context: block every subresource except the yjc API we call ourselves.
 const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
 const page = await browser.newPage();
-await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+await page.setRequestInterception(true);
+page.on('request', (req) => {
+  const isMainFrameDoc = req.isNavigationRequest() && req.frame() === page.mainFrame();
+  if (isMainFrameDoc || req.url().startsWith('https://static-wzdh.2345.com/')) {
+    req.continue();
+  } else {
+    req.abort();
+  }
+});
+
+let loaded = false;
+for (let attempt = 1; attempt <= 3 && !loaded; attempt++) {
+  try {
+    await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    loaded = true;
+  } catch (e) {
+    console.error(`page.goto attempt ${attempt} failed (${e.message.split('\n')[0]})`);
+    if (attempt === 3) throw e;
+  }
+}
 
 const rows = [];
 // one page.evaluate per month keeps each call well under eval timeouts

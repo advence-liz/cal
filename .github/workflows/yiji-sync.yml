@@ -33,6 +33,7 @@ jobs:
       - name: Sync 宜/忌 from 2345
         id: sync
         run: |
+          set -o pipefail
           npm install
           node scripts/sync-yiji-2345.mjs | tee sync.log
           grep -E '^(changed|suspicious)=' sync.log >> "$GITHUB_OUTPUT" || true
