@@ -3,6 +3,7 @@ import {
   countWorkdays,
   addWorkdays,
   nextHoliday,
+  nextHolidays,
 } from './workday.js';
 import { makeRunner } from './test-harness.js';
 
@@ -59,6 +60,39 @@ export function runTests() {
     eq(nextHoliday('2026-06-08', store), {
       name: '端午节', date: '2026-06-19', daysAway: 11,
     }));
+
+  check('11. nextHolidays 按日期排序取前 N 个不同假期', () => {
+    // 直接用真数据仓库不可行（纯函数无 IO），这里用 makeStore 的年份
+    // 结构手工造两个假期：端午(6/19)之后加中秋(9/25)，断言顺序与字段
+    const store2 = new Map();
+    store2.set(2026, new Map([
+      ['2026-06-19', { name: '端午节', isOffDay: true }],
+      ['2026-09-25', { name: '中秋节', isOffDay: true }],
+    ]));
+    eq(nextHolidays('2026-06-08', store2, 2), [
+      { name: '端午节', date: '2026-06-19', daysAway: 11 },
+      { name: '中秋节', date: '2026-09-25', daysAway: 109 },
+    ]);
+  });
+
+  check('12. nextHolidays 不足 N 个时返回实有数量', () => {
+    const store2 = new Map();
+    store2.set(2026, new Map([
+      ['2026-06-19', { name: '端午节', isOffDay: true }],
+    ]));
+    eq(nextHolidays('2026-06-08', store2, 2).length, 1);
+    eq(nextHolidays('2027-01-01', store2, 2), []);
+  });
+
+  check('13. nextHoliday 与 nextHolidays 取第 1 个一致', () => {
+    const store2 = new Map();
+    store2.set(2026, new Map([
+      ['2026-06-19', { name: '端午节', isOffDay: true }],
+      ['2026-09-25', { name: '中秋节', isOffDay: true }],
+    ]));
+    const [first] = nextHolidays('2026-06-08', store2, 1);
+    eq(nextHoliday('2026-06-08', store2), first);
+  });
 
   return results;
 }

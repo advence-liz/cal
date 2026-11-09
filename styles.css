@@ -168,6 +168,23 @@ body {
   color: var(--holiday);
 }
 
+/* 今年剩余工作日速览：与 next-holiday 同款胶囊，弱色调不打架 */
+.workday-remaining {
+  font-size: 0.95rem;
+  color: var(--muted);
+  background: var(--alt-bg);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+}
+.workday-remaining strong { color: var(--today); }
+
+@media (max-width: 480px) {
+  /* 窄屏只保留最近一个假期倒计时，第二个与剩余工作日让位 */
+  .next-holiday__second,
+  .workday-remaining { display: none; }
+}
+
 .status-bar {
   padding: 0.6rem 1.5rem;
   background: var(--warn-bg);

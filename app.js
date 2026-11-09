@@ -9,6 +9,7 @@ import {
   countWorkdays,
   addWorkdays,
   nextHoliday,
+  nextHolidays,
   formatDate,
   parseDate,
 } from './workday.js';
@@ -193,15 +194,34 @@ async function gotoMonth(year, month) {
 }
 
 function renderNextHoliday() {
-  const result = nextHoliday(state.today, getDataStore());
+  // 展示最近两个法定假期："距元旦还有X天"之后用户自然想问"那春节呢"。
+  // 第二个假期在窄屏（≤480px）下由 CSS 隐藏，避免顶栏挤爆。
+  const results = nextHolidays(state.today, getDataStore(), 2);
   const el = $('nextHoliday');
-  if (!result) {
+  if (results.length === 0) {
     el.textContent = '暂无后续法定假期数据';
     el.classList.remove('has-data');
     return;
   }
-  el.innerHTML = `距 <strong>${result.name}</strong> 还有 <strong>${result.daysAway}</strong>&nbsp;天 (${result.date})`;
+  const fmt = ({ name, date, daysAway }) =>
+    `距 <strong>${name}</strong> 还有 <strong>${daysAway}</strong>&nbsp;天 (${date})`;
+  const second = results[1] ? `<span class="next-holiday__second">${fmt(results[1])}</span>` : '';
+  el.innerHTML = `${fmt(results[0])}${results[1] ? '&nbsp;·&nbsp;' + second : ''}`;
   el.classList.add('has-data');
+}
+
+// 一眼可见的摸鱼进度：今年还剩多少个工作日（含今天，与计算工具口径一致）。
+function renderWorkdayRemaining() {
+  const el = $('workdayRemaining');
+  el.hidden = false;
+  const year = state.today.slice(0, 4);
+  try {
+    const remaining = countWorkdays(state.today, `${year}-12-31`, getDataStore());
+    el.innerHTML = `今年还剩 <strong>${remaining}</strong>&nbsp;个工作日`;
+    el.classList.add('has-data');
+  } catch {
+    el.textContent = ''; // 数据未就绪时不占位误导
+  }
 }
 
 // --- 日期详情面板（tap-to-view，弥补移动端没有 title hover 的问题）---
@@ -484,6 +504,16 @@ function bindActivityFilters() {
   });
 }
 
+// 详情面板在日历下方。桌面视口较矮时它在折叠线之下——点了日期却毫无
+// 反馈是最伤的体验；完整可见时不滚动（避免多余跳动）。
+function ensureDetailVisible() {
+  const detail = $('dayDetail');
+  if (detail.hidden) return;
+  const r = detail.getBoundingClientRect();
+  if (r.top >= 0 && r.bottom <= window.innerHeight) return;
+  detail.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
+}
+
 function selectDay(cell) {
   state.selected = cell.dataset.date;
   $('countForm').start.value = state.selected;
@@ -493,6 +523,7 @@ function selectDay(cell) {
   cell.classList.add('day--selected');
 
   showDayDetail(state.selected);
+  ensureDetailVisible();
   updateHash();
 }
 
@@ -647,6 +678,7 @@ async function applyHashView(fallbackYear, fallbackMonth) {
     if (cell) {
       cell.classList.add('day--selected');
       showDayDetail(state.selected);
+      ensureDetailVisible(); // 深链进入时让目标日的详情可见，而不是停在视口外
     }
   }
 }
@@ -680,6 +712,7 @@ async function init() {
     $('addForm').start.value = state.selected;
   }
   renderNextHoliday();
+  renderWorkdayRemaining();
 }
 
 init().catch((err) => {
