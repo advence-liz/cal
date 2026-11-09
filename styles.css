@@ -282,6 +282,52 @@ body {
   padding: 1rem 1.25rem;
 }
 
+/* 月标题可点（快速跳转年月）：默认看起来仍是标题，hover/焦点才给暗示 */
+#monthTitle,
+#monthTitleMobile {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+#monthTitle:hover,
+#monthTitle:focus-visible,
+#monthTitleMobile:hover,
+#monthTitleMobile:focus-visible {
+  color: var(--today);
+}
+#monthTitle:focus-visible,
+#monthTitleMobile:focus-visible {
+  outline: 2px solid var(--today);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.month-jump {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.month-jump input {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+}
+.month-jump button {
+  padding: 0.25rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--alt-bg);
+  color: inherit;
+  cursor: pointer;
+}
+.month-jump button:hover { background: var(--hover); }
+
 .cal-nav {
   display: flex;
   align-items: center;
@@ -747,6 +793,30 @@ body {
 }
 /* 每个日期区间整体不拆行，换行只落在顿号后，避免"4月19~23 / 日"这种截断 */
 .leave-plan__range { white-space: nowrap; }
+
+/* 全年一览：折叠表，行内"标出"与卡片同款按钮的迷你版 */
+.leave-plan__overview { margin-top: 0.4rem; }
+.leave-plan__overview summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.leave-plan__overview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+}
+.leave-plan__overview th,
+.leave-plan__overview td {
+  padding: 0.25rem 0.3rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+.leave-plan__overview th { color: var(--muted); font-weight: 600; }
+.leave-plan__row-btn { margin-top: 0; padding: 0.1rem 0.5rem; }
+.leave-plan__row-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .leave-plan__mark-btn {
   flex: none;
   padding: 0.2rem 0.6rem;

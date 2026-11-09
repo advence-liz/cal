@@ -39,9 +39,15 @@
     <section class="cal-panel">
       <div class="cal-nav">
         <button id="prevMonth" type="button" aria-label="上月">‹</button>
-        <h2 id="monthTitle">—</h2>
+        <h2 id="monthTitle" tabindex="0" role="button" title="点击快速跳转年月">—</h2>
         <button id="nextMonth" type="button" aria-label="下月">›</button>
         <button id="todayBtn" type="button" class="today-btn">回到今天</button>
+      </div>
+
+      <div class="month-jump" id="monthJumpPanel" hidden>
+        <label for="monthJumpInput">跳转到：</label>
+        <input type="month" id="monthJumpInput" aria-label="选择年月">
+        <button id="monthJumpGo" type="button">跳转</button>
       </div>
 
       <div class="activity-filters-wrap">
@@ -124,7 +130,7 @@
 
   <div class="mobile-nav-bar" id="mobileNavBar">
     <button id="prevMonthMobile" type="button" aria-label="上月">‹</button>
-    <span id="monthTitleMobile">—</span>
+    <span id="monthTitleMobile" tabindex="0" role="button" title="点击快速跳转年月">—</span>
     <button id="nextMonthMobile" type="button" aria-label="下月">›</button>
     <button id="todayBtnMobile" type="button">今天</button>
   </div>

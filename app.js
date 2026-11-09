@@ -354,7 +354,33 @@ function bindLeavePlan() {
       clearLeaveTeaser();
       return;
     }
-    out.innerHTML = list.map((row, idx) => {
+    // 全年一览：回答"这段时间所有假期怎么拼"的全景问题，默认折叠免占空间。
+    // 行内"标出"按钮复用卡片同款 class，走同一个事件委托。
+    const overview = list.length > 1 ? `
+      <details class="leave-plan__overview">
+        <summary>全年一览（${list.length} 个假期，点「标出」直接画到日历）</summary>
+        <table>
+          <thead><tr><th>假期</th><th>不请假</th><th>方案</th><th></th></tr></thead>
+          <tbody>
+            ${list.map((row, idx) => {
+              const names = (row.recommended ? row.recommended.names : row.naturalNames).join('+');
+              const plan = row.recommended
+                ? `请 ${row.recommended.cost} → 休 ${row.recommended.totalDays}`
+                : '—';
+              const btnAttrs = row.recommended
+                ? ''
+                : 'disabled title="附近没有能拼的缺口"';
+              return `<tr>
+                <td>${names}</td>
+                <td>${row.naturalDays} 天</td>
+                <td>${plan}</td>
+                <td><button type="button" class="leave-plan__mark-btn leave-plan__row-btn" data-idx="${idx}" ${btnAttrs}>标出</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </details>` : '';
+    out.innerHTML = overview + list.map((row, idx) => {
       const names = (row.recommended ? row.recommended.names : row.naturalNames).join(' + ');
       const naturalLine = `<div class="leave-plan__natural">不请假连休 ${row.naturalDays}&nbsp;天（${shortDate(row.naturalStart)}~${shortDate(row.naturalEnd)}）</div>`;
       if (!row.recommended) {
@@ -443,6 +469,34 @@ function bindNav() {
     state.today = todayStr();
     const t = parseDate(state.today);
     gotoMonth(t.getFullYear(), t.getMonth() + 1);
+  });
+
+  // --- 年月快速跳转：点月标题弹出原生 month 输入，免去连点 ‹› 跨月 ---
+  const jumpPanel = $('monthJumpPanel');
+  const jumpInput = $('monthJumpInput');
+  const openJump = () => {
+    jumpInput.value = `${state.year}-${String(state.month).padStart(2, '0')}`;
+    jumpPanel.hidden = false;
+    jumpInput.focus();
+  };
+  const closeJump = () => { jumpPanel.hidden = true; };
+  const applyJump = () => {
+    const m = jumpInput.value.match(/^(\d{4})-(\d{2})$/);
+    if (!m) return; // Firefox 无原生 month 选择时允许手输同格式
+    deselectDay();
+    gotoMonth(Number(m[1]), Number(m[2]));
+    closeJump();
+  };
+  for (const el of [$('monthTitle'), $('monthTitleMobile')]) {
+    el.addEventListener('click', openJump);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openJump(); }
+    });
+  }
+  $('monthJumpGo').addEventListener('click', applyJump);
+  jumpInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); applyJump(); }
+    if (e.key === 'Escape') closeJump();
   });
 
   // Mobile-only sticky bottom bar — same actions, duplicated so the reach
