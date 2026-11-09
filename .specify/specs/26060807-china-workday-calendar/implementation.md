@@ -26,7 +26,7 @@
   1. 先在 `workday.test.js` 写 10 个 assertion，加载到 test.html → 全 RED（函数未实现）
   2. 在 `workday.js` 写最小实现 → 全 GREEN
   3. 重构：抽 `parseDate` / `formatDate` / `addDays` 小工具
-- **验证命令**: `python3 -m http.server 8000 -d /home/devtest/plaud/cal` 后浏览器开 `http://localhost:8000/workday.test.html`，控制台无 assert 失败
+- **验证命令**: 在仓库根 `python3 -m http.server 8000` 后浏览器开 `http://localhost:8000/workday.test.html`，控制台无 assert 失败
 - **commit**: `feat: workday pure functions + tests`
 
 ### Task 2: holidays.js 数据层（fetch + localStorage 缓存）
