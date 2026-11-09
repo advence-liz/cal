@@ -4,7 +4,8 @@
 // Why this exists: lunar.js's yiji table is a frozen snapshot of 2345's data
 // (~99.5% identical, see repo analysis 2026-11). The residual + any future
 // edits on 2345's side would silently drift. This script re-crawls 2345's
-// published 宜/忌 for a 3-year window and regenerates data/yiji-overrides.js
+// published 宜/忌 for a 2-year window (current + next year) and regenerates
+// data/yiji-overrides.js
 // — a diff-only file listing JUST the dates where 2345 differs from lunar.js.
 // The app then shows 2345's values verbatim on those dates.
 //
@@ -17,8 +18,8 @@
 // - Safety: if >1% of responses look throttled (both 宜 and 忌 as 无/empty),
 //   or the resulting diff exceeds 3% of scanned days, the script aborts
 //   WITHOUT writing — protecting the repo from a broken crawl.
-// - Window: previous/current/next year. Older override entries outside the
-//   window are preserved (2345 doesn't retro-edit; history stays tiny).
+// - Window: current + next year. Entries older than the window are pruned
+//   (past dates have no decision value; 2345 doesn't retro-edit anyway).
 //
 // CI contract (grep'd by .github/workflows/yiji-sync.yml):
 //   changed=true/false   regenerated file differs from the committed one
@@ -39,7 +40,10 @@ const API = 'https://static-wzdh.2345.com/tools/yjc?date=';
 const DELAY_MS = 100;
 
 const y = new Date().getFullYear();
-const YEARS = [y - 1, y, y + 1];
+// Window = current + next year. Past dates are NOT crawled: nobody plans
+// 宜忌 around days already gone, and lunar.js's snapshot already matches
+// 2345's historical values (frozen data, no retro-edits).
+const YEARS = [y, y + 1];
 
 const dedup = (s) => {
   const t = [...new Set(String(s || '').split(/\s+/).filter(Boolean))];
@@ -147,14 +151,11 @@ for (const r of rows) {
   newOverrides[r.d] = t;
 }
 
-// preserve existing entries outside the scan window (past dates 2345 won't
-// retro-edit; keeps history tiny and lets users browse back consistently)
+// Entries before the window are dropped entirely: past dates carry no
+// decision value (user's call), 2345 never retro-edits, and lunar.js's
+// snapshot already matches 2345's frozen historical data on those days.
 const existing = readExisting();
-const windowStart = DATES[0];
-const merged = { ...existing };
-for (const k of Object.keys(merged)) {
-  if (k >= windowStart) delete merged[k];
-}
+const merged = {};
 Object.assign(merged, newOverrides);
 const sortedKeys = Object.keys(merged).sort();
 
@@ -166,7 +167,7 @@ const canonic = (m) => JSON.stringify(Object.keys(m).sort().map((k) => [k, m[k]]
 const changed = canonic(merged) !== canonic(existing);
 
 const added = sortedKeys.filter((k) => !(k in existing));
-const dropped = Object.keys(existing).filter((k) => k >= windowStart && !(k in newOverrides));
+const dropped = Object.keys(existing).filter((k) => !(k in newOverrides));
 const suspicious = sortedKeys.length > 0.03 * DATES.length;
 
 if (changed) {

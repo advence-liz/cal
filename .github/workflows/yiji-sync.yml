@@ -3,7 +3,7 @@ name: Yiji sync from 2345
 # Daily sync of 宜/忌 overrides from 2345万年历 (tools.2345.com).
 # The app's vendor lunar.js carries a frozen snapshot of 2345's data
 # (~99.5% identical); data/yiji-overrides.js holds the diff so the app can
-# follow 2345 verbatim. This workflow re-crawls a 3-year window daily and
+# follow 2345 verbatim. This workflow re-crawls a 2-year window daily and
 # opens a PR only when 2345's published values actually changed.
 #
 # Safety gates (see scripts/sync-yiji-2345.mjs):
