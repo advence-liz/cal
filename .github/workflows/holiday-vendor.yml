@@ -1,0 +1,105 @@
+name: Vendor holiday-cn data
+
+# Monthly re-vendor of holiday-cn JSON into data/holidays-YYYY.json
+# (years y-1/y/y+1: y-1 feeds January's bleed cells).
+# The app loads these same-origin files first (fast in mainland China,
+# offline-capable) and only falls back to jsDelivr when a year's file is
+# missing — this workflow keeps the local copies fresh so the fallback
+# rarely fires. Push-to-main of data files alone can't change app behavior
+# beyond holiday dates themselves, hence tests still gate auto-merge.
+#
+# See scripts/vendor-holiday-cn.mjs for the fetch/safety rules
+# (placeholder files never overwrite populated ones; fetch failure = red run).
+
+on:
+  schedule:
+    - cron: '0 4 2 * *' # monthly, 2nd, 04:00 UTC (right after the lunar vendor check)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Vendor holiday-cn JSON
+        id: vendor
+        run: |
+          set -o pipefail
+          node scripts/vendor-holiday-cn.mjs | tee vendor.log
+          grep -E '^(changed|unpublished)=' vendor.log >> "$GITHUB_OUTPUT" || true
+
+      - name: Run test suite
+        id: tests
+        if: steps.vendor.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          python3 -m http.server 8080 &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8080/tests.html > /dev/null && break
+            sleep 0.5
+          done
+          npm test
+
+      - name: Create PR (auto-merge only when safe)
+        if: steps.vendor.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TESTS_OK: ${{ steps.tests.outcome == 'success' }}
+        run: |
+          STAMP=$(date -u +%Y%m%d)
+          BR="holiday-vendor-$STAMP"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if gh pr list --head "$BR" --state open | grep -q .; then
+            echo "PR for $BR already open — skipping."
+            exit 0
+          fi
+
+          git checkout -b "$BR"
+          git add data/holidays-*.json
+          git commit \
+            -m "chore: vendor holiday-cn data ($STAMP)" \
+            -m "$(grep -E '^(vendored|unpublished)' vendor.log | tr '\n' ' ')" \
+            -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+          git push origin "$BR"
+
+          gh label create "needs-human-decision" --color B60205 --description "需要人工决策,勿自动合并" 2>/dev/null || true
+
+          BODY_FILE=$(mktemp)
+          {
+            echo "holiday-cn 数据 vendored 进仓库（app 本地优先加载，jsDelivr 仅兜底）。"
+            echo ""
+            echo '```'
+            grep -E '^(vendored|unpublished)' vendor.log || true
+            echo '```'
+            echo ""
+            if [ "$TESTS_OK" = "true" ]; then
+              echo "测试: ✅ 通过"
+            else
+              echo "测试: ❌ 未通过(见 Actions 日志)"
+            fi
+            echo ""
+            echo "---"
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > "$BODY_FILE"
+
+          if [ "$TESTS_OK" = "true" ]; then
+            gh pr create --title "chore: vendor holiday-cn data ($STAMP)" \
+              --body-file "$BODY_FILE" --head "$BR"
+            gh pr merge "$BR" --squash --delete-branch
+            echo "Auto-merged: holiday vendor, tests green."
+          else
+            gh pr create --title "chore: vendor holiday-cn data ($STAMP) (需人工决策)" \
+              --body-file "$BODY_FILE" --head "$BR" --label "needs-human-decision"
+            echo "PR left open for human decision (tests_ok=$TESTS_OK)."
+          fi

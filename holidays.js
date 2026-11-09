@@ -1,5 +1,8 @@
-// Data layer: fetch holiday-cn JSON via jsDelivr CDN, cache in localStorage,
-// expose an in-memory dataStore consumed by workday.js.
+// Data layer: holiday-cn JSON. Local vendored copy first
+// (data/holidays-YYYY.json, refreshed by holiday-vendor.yml), jsDelivr CDN as
+// fallback; cache in localStorage; expose an in-memory dataStore consumed by
+// workday.js. Local-first exists because cdn.jsdelivr.net is unreliable
+// inside mainland China — vendoring makes the site zero-external-dependency.
 
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master';
 const TTL_MS = 7 * 24 * 3600 * 1000;
@@ -46,7 +49,21 @@ function ingest(year, days) {
   dataStore.set(year, map);
 }
 
+// Local file first (same-origin, fast in CN, offline-capable once the SW has
+// cached it); jsDelivr only when the vendored file is missing — e.g. a brand
+// new year not yet vendored. Returns { days, via: 'local' | 'cdn' }.
 async function fetchYear(year) {
+  try {
+    const res = await fetch(`data/holidays-${year}.json`);
+    if (res.ok) {
+      const json = await res.json();
+      const days = json.days || [];
+      if (days.length > 0) return { days, via: 'local' };
+    }
+  } catch {
+    // fall through to CDN
+  }
+
   const res = await fetch(`${CDN_BASE}/${year}.json`);
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`);
@@ -62,11 +79,11 @@ async function fetchYear(year) {
     err.status = 404;
     throw err;
   }
-  return days;
+  return { days, via: 'cdn' };
 }
 
-// Load one year: cache (if fresh) → network → stale cache fallback.
-// Returns {year, source: 'cache'|'cdn'|'stale-cache', error?}
+// Load one year: cache (if fresh) → local vendored / network → stale cache fallback.
+// Returns {year, source: 'cache'|'local'|'cdn'|'stale-cache', error?}
 async function loadOneYear(year) {
   const cached = readCache(year);
   if (cached && Date.now() - cached.fetchedAt < TTL_MS) {
@@ -74,10 +91,10 @@ async function loadOneYear(year) {
     return { year, source: 'cache' };
   }
   try {
-    const days = await fetchYear(year);
+    const { days, via } = await fetchYear(year);
     ingest(year, days);
     writeCache(year, days);
-    return { year, source: 'cdn' };
+    return { year, source: via };
   } catch (error) {
     if (cached) {
       ingest(year, cached.days);

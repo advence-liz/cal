@@ -13,12 +13,20 @@ const page = await browser.newPage();
 page.on('console', (msg) => console.log('[page]', msg.text()));
 page.on('pageerror', (err) => console.error('[pageerror]', err.message));
 
-await page.goto(URL, { waitUntil: 'networkidle0' });
+await page.goto(URL, { waitUntil: 'domcontentloaded' });
 
-const summaries = await page.$$eval(
-  'h2[id^="summary-"]',
-  (els) => els.map((e) => ({ text: e.textContent, ok: e.className === 'ok' }))
-);
+// Poll until every suite summary leaves its "运行中…" placeholder — robust
+// against long-lived connections that would starve a networkidle0 wait.
+const deadline = Date.now() + 60000;
+let summaries = [];
+while (Date.now() < deadline) {
+  summaries = await page.$$eval(
+    'h2[id^="summary-"]',
+    (els) => els.map((e) => ({ text: e.textContent, ok: e.className === 'ok' }))
+  );
+  if (summaries.length > 0 && summaries.every((s) => !s.text.includes('运行中'))) break;
+  await new Promise((r) => setTimeout(r, 300));
+}
 
 if (summaries.length === 0) {
   console.error('No test summaries found — did tests.html load correctly?');
