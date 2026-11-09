@@ -585,6 +585,8 @@ body {
   border: 1px solid var(--makeup);
   background: var(--makeup-bg);
 }
+/* 拼假卡移入左栏日历面板内（填掉详情面板下方的大片空白），与 day-detail 保持间距节奏 */
+.cal-panel .tool-card--featured { margin-top: 1rem; }
 .tool-card--featured h3 {
   margin: 0 0 0.4rem 0;
   font-size: 1.05rem;
