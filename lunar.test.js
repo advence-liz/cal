@@ -45,5 +45,19 @@ export function runTests() {
     eq(getDayInfo('2027-02-06').festival, '春节');
   });
 
+  check('7. 宜忌覆盖层：2345 差异日(2026-06-05 芒种边界)显示 2345 原文', () => {
+    const info = getDayInfo('2026-06-05');
+    // 2345 当天用旧月建口径，与 lunar.js 快照不同 → 必须跟随 2345
+    eq(info.yi[0], '嫁娶');
+    eq(info.yi.includes('会亲友'), true);
+    eq(info.ji.includes('入宅'), true); // lunar.js 该日忌为"无"，2345 有具体条目
+  });
+
+  check('8. 宜忌覆盖层：非覆盖日不受影响，仍走 lunar.js 计算', () => {
+    const info = getDayInfo('2026-06-04'); // 覆盖表相邻日，不应有 override
+    eq(info.yi.includes('作灶'), true);    // lunar.js 快照值
+    eq(info.ji.includes('破土'), true);
+  });
+
   return results;
 }

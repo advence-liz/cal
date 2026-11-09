@@ -1,0 +1,109 @@
+name: Yiji sync from 2345
+
+# Daily sync of 宜/忌 overrides from 2345万年历 (tools.2345.com).
+# The app's vendor lunar.js carries a frozen snapshot of 2345's data
+# (~99.5% identical); data/yiji-overrides.js holds the diff so the app can
+# follow 2345 verbatim. This workflow re-crawls a 3-year window daily and
+# opens a PR only when 2345's published values actually changed.
+#
+# Safety gates (see scripts/sync-yiji-2345.mjs):
+#   - crawl aborted (exit 1) if >1% of responses look throttled → red run, no PR
+#   - suspicious=true if overrides exceed 3% of scanned days → PR, no auto-merge
+# Otherwise: tests green → auto squash-merge; tests red → needs-human-decision.
+
+on:
+  schedule:
+    - cron: '30 18 * * *' # daily, 18:30 UTC = 北京时间 02:30
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync 宜/忌 from 2345
+        id: sync
+        run: |
+          npm install
+          node scripts/sync-yiji-2345.mjs | tee sync.log
+          grep -E '^(changed|suspicious)=' sync.log >> "$GITHUB_OUTPUT" || true
+
+      - name: Run test suite
+        id: tests
+        if: steps.sync.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          python3 -m http.server 8080 &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8080/tests.html > /dev/null && break
+            sleep 0.5
+          done
+          npm test
+
+      - name: Create PR (auto-merge only when safe)
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUSPICIOUS: ${{ steps.sync.outputs.suspicious }}
+          TESTS_OK: ${{ steps.tests.outcome == 'success' }}
+        run: |
+          STAMP=$(date -u +%Y%m%d)
+          BR="yiji-sync-$STAMP"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if gh pr list --head "$BR" --state open | grep -q .; then
+            echo "PR for $BR already open — skipping."
+            exit 0
+          fi
+
+          git checkout -b "$BR"
+          git add data/yiji-overrides.js
+          git commit \
+            -m "chore: sync 宜/忌 overrides from 2345 ($STAMP)" \
+            -m "$(grep -E '^(scanned|added)' sync.log | tr '\n' ' ')" \
+            -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+          git push origin "$BR"
+
+          gh label create "needs-human-decision" --color B60205 --description "需要人工决策,勿自动合并" 2>/dev/null || true
+
+          BODY_FILE=$(mktemp)
+          {
+            echo "2345万年历宜忌日同步。"
+            echo ""
+            echo '```'
+            grep -E '^(scanned|added|SUSPICIOUS)' sync.log || true
+            echo '```'
+            echo ""
+            if [ "$SUSPICIOUS" = "true" ]; then
+              echo "⚠️ **覆盖天数超过扫描窗口的 3%,疑似 2345 侧异常,不自动合并。**"
+            fi
+            if [ "$TESTS_OK" = "true" ]; then
+              echo "测试: ✅ 通过"
+            else
+              echo "测试: ❌ 未通过(见 Actions 日志)"
+            fi
+            echo ""
+            echo "---"
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > "$BODY_FILE"
+
+          if [ "$SUSPICIOUS" != "true" ] && [ "$TESTS_OK" = "true" ]; then
+            gh pr create --title "chore: sync 宜/忌 overrides from 2345 ($STAMP)" \
+              --body-file "$BODY_FILE" --head "$BR"
+            gh pr merge "$BR" --squash --delete-branch
+            echo "Auto-merged: yiji sync, tests green."
+          else
+            gh pr create --title "chore: sync 宜/忌 overrides from 2345 ($STAMP) (需人工决策)" \
+              --body-file "$BODY_FILE" --head "$BR" --label "needs-human-decision"
+            echo "PR left open for human decision (suspicious=$SUSPICIOUS tests_ok=$TESTS_OK)."
+          fi
