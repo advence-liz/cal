@@ -213,20 +213,48 @@ body {
 
 .main {
   display: grid;
+  /* <1360px：双栏，拼假和工具同在右栏（拼假在上） */
   grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  grid-template-areas:
+    'cal leave'
+    'cal tools';
   gap: 1.5rem;
   padding: 1.5rem;
   max-width: 1100px;
   margin: 0 auto;
 }
 
+/* ≥1360px 宽屏：三栏 拼假 | 日历 | 工具，三个区域首屏都可见 */
+@media (min-width: 1360px) {
+  .main {
+    max-width: 1400px;
+    grid-template-columns: minmax(0, 300px) minmax(0, 1fr) minmax(0, 300px);
+    grid-template-areas: 'leave cal tools';
+    gap: 1rem 1.25rem;
+  }
+}
+
 @media (max-width: 820px) {
-  .main { grid-template-columns: minmax(0, 1fr); }
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'cal'
+      'leave'
+      'tools';
+  }
 }
 
 .cal-panel,
-.tools {
+.tools,
+.leave-side {
   min-width: 0;
+}
+.cal-panel { grid-area: cal; }
+.leave-side {
+  grid-area: leave;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .cal-panel,
@@ -585,8 +613,6 @@ body {
   border: 1px solid var(--makeup);
   background: var(--makeup-bg);
 }
-/* 拼假卡移入左栏日历面板内（填掉详情面板下方的大片空白），与 day-detail 保持间距节奏 */
-.cal-panel .tool-card--featured { margin-top: 1rem; }
 .tool-card--featured h3 {
   margin: 0 0 0.4rem 0;
   font-size: 1.05rem;
