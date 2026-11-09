@@ -662,6 +662,13 @@ body {
   font-weight: 600;
   font-size: 0.87rem;
 }
+.leave-plan__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.leave-plan__head .leave-plan__mark-btn { margin-top: 0; }
 .leave-plan__natural {
   margin-top: 0.1rem;
   font-size: 0.76rem;
@@ -670,16 +677,33 @@ body {
 .leave-plan__summary {
   margin-top: 0.25rem;
   font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 .leave-plan__summary strong { color: var(--makeup); }
+.leave-plan__ratio {
+  flex: none;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--makeup-bg);
+  color: var(--makeup);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .leave-plan .hint { margin-top: 0.25rem; }
 .leave-plan__dates {
   margin-top: 0.15rem;
   font-size: 0.76rem;
   color: var(--muted);
 }
+/* 每个日期区间整体不拆行，换行只落在顿号后，避免"4月19~23 / 日"这种截断 */
+.leave-plan__range { white-space: nowrap; }
 .leave-plan__mark-btn {
-  margin-top: 0.35rem;
+  flex: none;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--makeup);
@@ -688,6 +712,7 @@ body {
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 .leave-plan__mark-btn:hover { background: var(--makeup-bg); }
 .leave-plan__clear-btn {

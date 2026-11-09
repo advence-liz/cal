@@ -1,4 +1,4 @@
-import { suggestHolidayOpportunities, yearsInRange } from './bridge-plan.js';
+import { suggestHolidayOpportunities, yearsInRange, groupDateRanges } from './bridge-plan.js';
 import { makeRunner } from './test-harness.js';
 
 // 中秋(9-25~9-27) + 3 天工作日缺口(9-28~9-30) + 国庆(10-1~10-7)：
@@ -81,6 +81,27 @@ export function runTests() {
 
   check('9. yearsInRange: 从年底起跨两个年头，会覆盖三个年份', () => {
     eq(yearsInRange('2026-12-31', 400), [2026, 2027, 2028]);
+  });
+
+  check('10. groupDateRanges: 连续日期合并成区间，周末断开的各自成段', () => {
+    // 2026-04-06(一)~04-09(五)、04-10/11 周末不请假、04-12(一)~04-16(五)
+    const runs = groupDateRanges([
+      '2026-04-06', '2026-04-07', '2026-04-08', '2026-04-09',
+      '2026-04-12', '2026-04-13', '2026-04-14', '2026-04-15', '2026-04-16',
+      '2026-04-30',
+    ]);
+    eq(runs, [
+      { start: '2026-04-06', end: '2026-04-09' },
+      { start: '2026-04-12', end: '2026-04-16' },
+      { start: '2026-04-30', end: '2026-04-30' },
+    ]);
+  });
+
+  check('11. groupDateRanges: 空输入和单日边界', () => {
+    eq(groupDateRanges([]), []);
+    eq(groupDateRanges(['2027-06-10']), [{ start: '2027-06-10', end: '2027-06-10' }]);
+    // 跨月相连（7-31 → 8-1）也要合并，不能按月份字符串前缀硬切
+    eq(groupDateRanges(['2027-07-31', '2027-08-01']), [{ start: '2027-07-31', end: '2027-08-01' }]);
   });
 
   return results;

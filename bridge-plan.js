@@ -98,6 +98,18 @@ function paretoOptions(segments, coreIdx) {
   return pareto; // first entry is always {cost: 0, gain: 0} — the natural, unpaid block.
 }
 
+// Merge sorted YYYY-MM-DD dates into consecutive runs, for compact display:
+// 19 individually-listed leave days collapse into ~4 tokens like "4月6~9日".
+export function groupDateRanges(dates) {
+  const runs = [];
+  for (const d of dates) {
+    const prev = runs[runs.length - 1];
+    if (prev && addDays(prev.end, 1) === d) prev.end = d;
+    else runs.push({ start: d, end: d });
+  }
+  return runs;
+}
+
 function daysBetweenInclusive(start, end) {
   return Math.round((parseDate(end) - parseDate(start)) / 86400000) + 1;
 }

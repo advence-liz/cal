@@ -14,7 +14,7 @@ import {
 } from './workday.js';
 import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, findNextSuitableDate, ACTIVITIES } from './calendar.js';
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
-import { suggestHolidayOpportunities, yearsInRange } from './bridge-plan.js';
+import { suggestHolidayOpportunities, yearsInRange, groupDateRanges } from './bridge-plan.js';
 
 // 微信内置浏览器允许缩放时，用户一旦双指缩放就会弹出微信自己的缩放控件
 // （这是 WeChat WebView 的行为，控件本身我们改不了）。只对微信 UA 关掉
@@ -294,6 +294,26 @@ function formatLeaveDateLabel(dateStr) {
   return `${d.getMonth() + 1}月${d.getDate()}日(周${WEEKDAY_CN[d.getDay()]})`;
 }
 
+// 紧凑展示：单日保留周几（"6月10日(周四)"），连续日合并成区间（"4月6~9日"）。
+// 19 天逐日罗列的文本墙是拼假卡片留白的最大来源。
+function formatLeaveRangeLabel({ start, end }) {
+  if (start === end) return formatLeaveDateLabel(start);
+  const s = parseDate(start);
+  const e = parseDate(end);
+  if (start.slice(0, 4) !== end.slice(0, 4)) {
+    return `${s.getFullYear()}年${s.getMonth() + 1}月${s.getDate()}日 ~ ${e.getFullYear()}年${e.getMonth() + 1}月${e.getDate()}日`;
+  }
+  if (s.getMonth() === e.getMonth()) return `${s.getMonth() + 1}月${s.getDate()}~${e.getDate()}日`;
+  return `${s.getMonth() + 1}月${s.getDate()}日~${e.getMonth() + 1}月${e.getDate()}日`;
+}
+
+// 卡片内的日期一律用短格式 M/D：年份在"近 400 天"语境里不言自明，
+// 全称 "2027-04-03 ~ 2027-05-05" 既宽又重复。
+function shortDate(dateStr) {
+  const [, m, d] = dateStr.split('-').map(Number);
+  return `${m}/${d}`;
+}
+
 function bindLeavePlan() {
   const out = $('leavePlanResult');
   let currentList = [];
@@ -316,7 +336,7 @@ function bindLeavePlan() {
     }
     out.innerHTML = list.map((row, idx) => {
       const names = (row.recommended ? row.recommended.names : row.naturalNames).join(' + ');
-      const naturalLine = `<div class="leave-plan__natural">不请假：连休 ${row.naturalDays}&nbsp;天（${row.naturalStart} ~ ${row.naturalEnd}）</div>`;
+      const naturalLine = `<div class="leave-plan__natural">不请假连休 ${row.naturalDays}&nbsp;天（${shortDate(row.naturalStart)}~${shortDate(row.naturalEnd)}）</div>`;
       if (!row.recommended) {
         return `
           <div class="leave-plan">
@@ -328,13 +348,21 @@ function bindLeavePlan() {
       }
       const r = row.recommended;
       const ratio = (r.totalDays / r.cost).toFixed(1);
+      const ranges = groupDateRanges(r.leaveDates)
+        .map((g) => `<span class="leave-plan__range">${formatLeaveRangeLabel(g)}</span>`)
+        .join('、');
       return `
         <div class="leave-plan">
-          <div class="leave-plan__title">${names}</div>
+          <div class="leave-plan__head">
+            <div class="leave-plan__title">${names}</div>
+            <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">标出 →</button>
+          </div>
           ${naturalLine}
-          <div class="leave-plan__summary">请假 <strong>${r.cost}</strong>&nbsp;天 → 连休 <strong>${r.totalDays}</strong>&nbsp;天（${r.start} ~ ${r.end}），平均每请&nbsp;1&nbsp;天换 <strong>${ratio}</strong>&nbsp;天连休</div>
-          <div class="leave-plan__dates">需请假：${r.leaveDates.map(formatLeaveDateLabel).join('、')}</div>
-          <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">在日历中标出 →</button>
+          <div class="leave-plan__summary">
+            <span>请假 <strong>${r.cost}</strong>&nbsp;→ 连休 <strong>${r.totalDays}</strong>&nbsp;天（${shortDate(r.start)}~${shortDate(r.end)}）</span>
+            <span class="leave-plan__ratio" title="平均每请 1 天年假换 ${ratio} 天连休">1 换 ${ratio}</span>
+          </div>
+          <div class="leave-plan__dates">需请假：${ranges}</div>
         </div>
       `;
     }).join('') + '<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">清除标注</button>';
