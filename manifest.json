@@ -1,7 +1,7 @@
 {
-  "name": "中国工作日历",
-  "short_name": "工作日历",
-  "description": "标注法定节假日、调休上班日、农历的静态工作日历工具",
+  "name": "摸鱼日历",
+  "short_name": "摸鱼日历",
+  "description": "摸鱼日历：标注法定节假日、调休上班日、农历，还告诉你怎么拼假摸得最久",
   "lang": "zh-CN",
   "start_url": ".",
   "scope": ".",

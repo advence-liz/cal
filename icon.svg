@@ -1,17 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <clipPath id="page">
+      <rect x="10" y="34" width="108" height="84" rx="14"/>
+    </clipPath>
+  </defs>
+  <!-- 摸鱼日历 icon: 一张日历纸的下半页浸在水里,一条小鱼在摸鱼。
+       日历纸(白色圆角矩形+短横线标题)保留"日历"识别度,
+       水面与小鱼表达"摸鱼";配色沿用应用的品牌蓝,无渐变、无栅格。 -->
   <rect width="128" height="128" rx="28" fill="#1e88e5"/>
-  <!-- Header + page-body split is the one genuinely universal "calendar" cue
-       (predates any specific app), so it's kept — but no red band, no rings,
-       no giant date number, so it doesn't read as an Apple Calendar clone.
-       The body carries the app's own color coding instead (red = 法定假,
-       green = 宜) via a small day-cell grid rather than a single big number. -->
-  <rect x="10" y="42" width="108" height="76" rx="14" fill="#ffffff"/>
-  <rect x="20" y="52" width="16" height="16" rx="5" fill="#dbe9f7"/>
-  <rect x="42" y="52" width="16" height="16" rx="5" fill="#dbe9f7"/>
-  <rect x="64" y="52" width="16" height="16" rx="5" fill="#dbe9f7"/>
-  <rect x="86" y="52" width="16" height="16" rx="5" fill="#e53935"/>
-  <rect x="20" y="74" width="16" height="16" rx="5" fill="#dbe9f7"/>
-  <rect x="42" y="74" width="16" height="16" rx="5" fill="#2e7d32"/>
-  <rect x="64" y="74" width="16" height="16" rx="5" fill="#dbe9f7"/>
-  <rect x="86" y="74" width="16" height="16" rx="5" fill="#dbe9f7"/>
+
+  <!-- 日历纸 -->
+  <rect x="10" y="34" width="108" height="84" rx="14" fill="#ffffff"/>
+  <!-- 页首标题线(替代旧的九宫格,更轻) -->
+  <rect x="22" y="46" width="26" height="7" rx="3.5" fill="#90caf9"/>
+  <rect x="54" y="46" width="14" height="7" rx="3.5" fill="#bbdefb"/>
+
+  <!-- 水面:波浪线封顶的水体,裁进纸张圆角内 -->
+  <g clip-path="url(#page)">
+    <path d="M0 78 Q 16 70 32 78 T 64 78 T 96 78 T 128 78 V 128 H 0 Z" fill="#bbdefb"/>
+  </g>
+
+  <!-- 鱼:朝右游,尾鳍在左,身体圆润 -->
+  <path d="M46 96 C 54 84 74 82 84 96 C 74 110 54 108 46 96 Z" fill="#1565c0"/>
+  <path d="M46 96 L 34 88 L 36 96 L 34 104 Z" fill="#1565c0"/>
+  <circle cx="76" cy="93" r="2.6" fill="#ffffff"/>
+  <!-- 气泡（水下） -->
+  <circle cx="94" cy="102" r="3" fill="#1565c0" opacity="0.4"/>
+  <circle cx="100" cy="111" r="2" fill="#1565c0" opacity="0.3"/>
 </svg>
