@@ -1,0 +1,116 @@
+name: Vendor lunar.js update
+
+# Monthly check for a new lunar-javascript release. 99% of runs find nothing
+# and exit in seconds. When a new version exists, the workflow:
+#   1. bumps vendor/lunar.js (via scripts/vendor-lunar-check.mjs), which also
+#      runs a golden diff over every field the app consumes (yi/ji/jieqi/
+#      festivals/lunar labels) for a fixed date sample;
+#   2. runs the browser test suite;
+#   3. PR + auto squash-merge ONLY if tests pass AND the golden diff is clean;
+#      otherwise the PR stays open with a label for a human decision
+#      (any 宜忌 change is a school/口径 question, not a bug to auto-ship).
+#
+# 法定假日/调休 does NOT depend on this — the app fetches holiday-cn at
+# runtime (holidays.js), so holiday-only lunar.js releases bump harmlessly.
+
+on:
+  schedule:
+    - cron: '0 3 2 * *' # monthly, 2nd, 03:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check for new lunar-javascript release
+        id: check
+        run: |
+          node scripts/vendor-lunar-check.mjs | tee check.log
+          grep -E '^(changed|version|drift)=' check.log >> "$GITHUB_OUTPUT" || true
+
+      - name: Run test suite
+        id: tests
+        if: steps.check.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          npm install
+          python3 -m http.server 8080 &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8080/tests.html > /dev/null && break
+            sleep 0.5
+          done
+          npm test
+
+      - name: Create PR (auto-merge only when safe)
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.check.outputs.version }}
+          DRIFT: ${{ steps.check.outputs.drift }}
+          TESTS_OK: ${{ steps.tests.outcome == 'success' }}
+        run: |
+          BR="vendor/lunar-$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if gh pr list --head "$BR" --state open | grep -q .; then
+            echo "PR for $BR already open — skipping."
+            exit 0
+          fi
+
+          git checkout -b "$BR"
+          git add vendor/lunar.js vendor-drift.txt 2>/dev/null || git add vendor/lunar.js
+          git commit \
+            -m "chore: bump vendor/lunar.js to v$VERSION" \
+            -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+          git push origin "$BR"
+
+          gh label create "needs-human-decision" --color B60205 --description "需要人工决策,勿自动合并" 2>/dev/null || true
+
+          BODY_FILE=$(mktemp)
+          {
+            echo "自动 bump vendor/lunar.js v当前 → v$VERSION。"
+            echo ""
+            if [ "$DRIFT" = "true" ]; then
+              echo "⚠️ **金标比对发现宜忌/历法输出有变化** —— 是否跟随新口径需要人工决策,不做自动合并。"
+              echo ""
+              if [ -f vendor-drift.txt ]; then
+                echo '```'
+                cat vendor-drift.txt
+                echo '```'
+              fi
+            else
+              echo "金标比对干净:应用消费的字段(宜/忌/节气/节日/农历标签)无任何变化。"
+            fi
+            echo ""
+            if [ "$TESTS_OK" = "true" ]; then
+              echo "测试: ✅ 通过"
+            else
+              echo "测试: ❌ 未通过(见 Actions 日志)"
+            fi
+            echo ""
+            echo "---"
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > "$BODY_FILE"
+
+          if [ "$DRIFT" = "false" ] && [ "$TESTS_OK" = "true" ]; then
+            gh pr create --title "chore: bump vendor/lunar.js to v$VERSION" \
+              --body-file "$BODY_FILE" --head "$BR"
+            gh pr merge "$BR" --squash --delete-branch
+            echo "Auto-merged: no drift, tests green."
+          else
+            LABELS="needs-human-decision"
+            gh pr create --title "chore: bump vendor/lunar.js to v$VERSION (需人工决策)" \
+              --body-file "$BODY_FILE" --head "$BR" --label "$LABELS"
+            echo "PR left open for human decision (drift=$DRIFT tests_ok=$TESTS_OK)."
+          fi
