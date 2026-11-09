@@ -471,32 +471,65 @@ function bindNav() {
     gotoMonth(t.getFullYear(), t.getMonth() + 1);
   });
 
-  // --- 年月快速跳转：点月标题弹出原生 month 输入，免去连点 ‹› 跨月 ---
+  // --- 年月快速跳转：点月标题弹出年份步进 + 十二月点选面板，
+  // 点某个月份立即跳转（一步到位）。原生 <input type="month"> 的下拉
+  // 弹层（Chrome 年列表 + 清除/本月链接）交互生硬且遮挡内容，故自绘。 ---
   const jumpPanel = $('monthJumpPanel');
-  const jumpInput = $('monthJumpInput');
+  const MIN_YEAR = 1900;
+  const MAX_YEAR = 2100;
+  let jumpYear = state.year;
+
+  const renderJumpMonths = () => {
+    $('monthJumpYear').textContent = `${jumpYear} 年`;
+    $('monthJumpMonths').innerHTML = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      const active = jumpYear === state.year && m === state.month;
+      return `<button type="button" class="month-jump__m${active ? ' active' : ''}" data-month="${m}" aria-current="${active ? 'month' : 'false'}">${m}月</button>`;
+    }).join('');
+  };
   const openJump = () => {
-    jumpInput.value = `${state.year}-${String(state.month).padStart(2, '0')}`;
+    jumpYear = state.year;
+    renderJumpMonths();
     jumpPanel.hidden = false;
-    jumpInput.focus();
+    // 从移动端底栏打开时面板在页面顶部，不在视野内就顺带滚过去
+    const r = jumpPanel.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > window.innerHeight) {
+      jumpPanel.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
+    }
   };
   const closeJump = () => { jumpPanel.hidden = true; };
-  const applyJump = () => {
-    const m = jumpInput.value.match(/^(\d{4})-(\d{2})$/);
-    if (!m) return; // Firefox 无原生 month 选择时允许手输同格式
-    deselectDay();
-    gotoMonth(Number(m[1]), Number(m[2]));
-    closeJump();
-  };
+
   for (const el of [$('monthTitle'), $('monthTitleMobile')]) {
-    el.addEventListener('click', openJump);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); // 别让同一次点击冒泡到 document 的"点外面关闭"
+      if (jumpPanel.hidden) openJump(); else closeJump();
+    });
     el.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openJump(); }
+      if (e.key === 'Escape') closeJump();
     });
   }
-  $('monthJumpGo').addEventListener('click', applyJump);
-  jumpInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); applyJump(); }
-    if (e.key === 'Escape') closeJump();
+  jumpPanel.addEventListener('click', (e) => e.stopPropagation());
+  // 关闭动作统一挂 document：点面板外、或焦点在别处按 Esc 都能关闭
+  document.addEventListener('click', closeJump);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !jumpPanel.hidden) closeJump();
+  });
+
+  $('monthJumpPrevYear').addEventListener('click', () => {
+    jumpYear = Math.max(MIN_YEAR, jumpYear - 1);
+    renderJumpMonths();
+  });
+  $('monthJumpNextYear').addEventListener('click', () => {
+    jumpYear = Math.min(MAX_YEAR, jumpYear + 1);
+    renderJumpMonths();
+  });
+  $('monthJumpMonths').addEventListener('click', (e) => {
+    const btn = e.target.closest('.month-jump__m');
+    if (!btn) return;
+    deselectDay();
+    gotoMonth(jumpYear, Number(btn.dataset.month));
+    closeJump();
   });
 
   // Mobile-only sticky bottom bar — same actions, duplicated so the reach
