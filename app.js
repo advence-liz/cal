@@ -171,6 +171,13 @@ async function gotoMonth(year, month) {
   // Normalize Dec/Jan overflow.
   if (month < 1) { year--; month = 12; }
   if (month > 12) { year++; month = 1; }
+  // 合法域防御：曾出现过 gotoMonth(1, 7) 把日历真渲染到公元 1 年的事故
+  // （旧版原生 month 弹层的年份列表可滚到 0001）。任何来源（hash、面板、
+  // 未来新调用点）传入的年份超界一律拒绝，保持当前视图不动。
+  if (!Number.isFinite(year) || !Number.isFinite(month) || year < 1900 || year > 2100) {
+    console.error('gotoMonth: 拒绝非法年月', { year, month });
+    return;
+  }
   state.year = year;
   state.month = month;
 
