@@ -45,10 +45,13 @@
       </div>
 
       <div class="month-jump" id="monthJumpPanel" hidden role="dialog" aria-label="跳转到指定年月">
-        <div class="month-jump__year">
-          <button type="button" id="monthJumpPrevYear" aria-label="上一年">‹</button>
-          <strong id="monthJumpYear" aria-live="polite">—</strong>
-          <button type="button" id="monthJumpNextYear" aria-label="下一年">›</button>
+        <div class="month-jump__head">
+          <div class="month-jump__year">
+            <button type="button" id="monthJumpPrevYear" aria-label="上一年">‹</button>
+            <strong id="monthJumpYear" aria-live="polite">—</strong>
+            <button type="button" id="monthJumpNextYear" aria-label="下一年">›</button>
+          </div>
+          <button type="button" class="month-jump__close" id="monthJumpClose" aria-label="收起年月选择">✕</button>
         </div>
         <div class="month-jump__months" id="monthJumpMonths"></div>
       </div>

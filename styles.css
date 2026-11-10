@@ -315,6 +315,29 @@ body {
   border-radius: 10px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
+.month-jump__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1.5rem;
+}
+.month-jump__head .month-jump__year { margin: 0 auto; }
+.month-jump__close {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: none;
+}
+.month-jump__close:hover {
+  background: var(--hover);
+  color: inherit;
+}
 .month-jump__year {
   display: flex;
   align-items: center;

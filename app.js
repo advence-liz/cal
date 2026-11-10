@@ -495,7 +495,11 @@ function bindNav() {
     }).join('');
   };
   const openJump = () => {
-    jumpYear = state.year;
+    // 双保险：理论上 gotoMonth 已拦截非法年份，这里再夹一次——
+    // 当前视图年份不合法（理论不该发生）就锚到今年，防止任何残留会话
+    // 把面板锚在荒谬年份上
+    const thisYear = Number(state.today.slice(0, 4));
+    jumpYear = state.year >= MIN_YEAR && state.year <= MAX_YEAR ? state.year : thisYear;
     renderJumpMonths();
     jumpPanel.hidden = false;
     // 从移动端底栏打开时面板在页面顶部，不在视野内就顺带滚过去
@@ -523,6 +527,7 @@ function bindNav() {
     if (e.key === 'Escape' && !jumpPanel.hidden) closeJump();
   });
 
+  $('monthJumpClose').addEventListener('click', closeJump);
   $('monthJumpPrevYear').addEventListener('click', () => {
     jumpYear = Math.max(MIN_YEAR, jumpYear - 1);
     renderJumpMonths();
