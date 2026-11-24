@@ -57,23 +57,22 @@ export function addWorkdays(startStr, n, store) {
   return cursor;
 }
 
-// Returns the next `count` distinct legal holidays (isOffDay=true), sorted by
-// first day, strictly after `fromStr`. Distinct = grouped by name + earliest
-// occurrence (a 中秋 that bridges into 国庆 yields two entries).
+// First future day of each holiday occurrence, with legacy CN data grouped by
+// name (a 中秋 that bridges into 国庆 still yields two entries).
 export function nextHolidays(fromStr, store, count = 2) {
-  const firstByName = new Map();
+  const firstByHoliday = new Map();
   for (const yearMap of store.values()) {
-    for (const [dateStr, meta] of yearMap) {
-      if (!meta.isOffDay) continue;
-      if (dateStr <= fromStr) continue;
-      const prev = firstByName.get(meta.name);
-      if (!prev || dateStr < prev) firstByName.set(meta.name, dateStr);
+    for (const [date, meta] of yearMap) {
+      if (!meta.isOffDay || date <= fromStr) continue;
+      const key = meta.holidayId || meta.name;
+      const prev = firstByHoliday.get(key);
+      if (!prev || date < prev.date) firstByHoliday.set(key, { name: meta.name, date });
     }
   }
   const daysAway = (dateStr) =>
     Math.round((parseDate(dateStr) - parseDate(fromStr)) / 86400000);
-  return [...firstByName.entries()]
-    .map(([name, date]) => ({ name, date, daysAway: daysAway(date) }))
+  return [...firstByHoliday.values()]
+    .map(({ name, date }) => ({ name, date, daysAway: daysAway(date) }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, count);
 }

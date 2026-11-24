@@ -1,6 +1,7 @@
 // Month grid renderer. Monday-first (中国习惯).
 
 import { formatDate, parseDate, addDays } from './workday.js';
+import { t, english, holidayLabel, dateLabel } from './i18n.js';
 import { getDayInfo } from './lunar-adapter.js';
 import { JIEQI_INFO, FESTIVAL_INFO } from './almanac-info.js';
 
@@ -70,21 +71,30 @@ export function describeDay(dateStr, dataStore) {
   return { dateStr, dow, meta, lunarInfo };
 }
 
+const solarTerms = Object.fromEntries('小寒 大寒 立春 雨水 惊蛰 春分 清明 谷雨 立夏 小满 芒种 夏至 小暑 大暑 立秋 处暑 白露 秋分 寒露 霜降 立冬 小雪 大雪 冬至'.split(' ').map((term, i) => [term,
+  ['Minor Cold', 'Major Cold', 'Start of Spring', 'Rain Water', 'Awakening of Insects', 'Spring Equinox', 'Clear and Bright', 'Grain Rain', 'Start of Summer', 'Grain Full', 'Grain in Ear', 'Summer Solstice', 'Minor Heat', 'Major Heat', 'Start of Autumn', 'End of Heat', 'White Dew', 'Autumn Equinox', 'Cold Dew', 'Frost Descent', 'Start of Winter', 'Minor Snow', 'Major Snow', 'Winter Solstice'][i]]));
+const termsLabel = (name) => english() ? solarTerms[name] || name : name;
+const lunarMonthLabel = (month) => month < 0 ? `Leap month ${-month}` : `Month ${month}`;
+
 // Human-readable summary lines for a describeDay() result.
 export function describeDayText(info) {
   const lines = [];
   if (info.meta) {
-    lines.push(info.meta.isOffDay ? `${info.meta.name} · 法定假` : `${info.meta.name} · 调休补班`);
+    const { name, isOffDay, observedFor } = info.meta;
+    const translated = holidayLabel(name);
+    if (observedFor) lines.push(t(`${name} · 补休（原节日 ${observedFor}）`, `${translated} · Observed (original date ${observedFor})`));
+    else lines.push(isOffDay ? t(`${name} · 法定假`, `${translated} · Public holiday`) : t(`${name} · 调休补班`, `${translated} · Make-up workday`));
   } else if (info.dow === 0 || info.dow === 6) {
-    lines.push('周末');
+    lines.push(t('周末', 'Weekend'));
   } else {
-    lines.push('工作日');
+    lines.push(t('工作日', 'Workday'));
   }
   if (info.lunarInfo) {
-    lines.push(`农历 ${info.lunarInfo.fullLabel}`);
-    if (info.lunarInfo.jieqi) lines.push(`节气：${info.lunarInfo.jieqi}`);
-    if (info.lunarInfo.festival) lines.push(`传统节日：${info.lunarInfo.festival}`);
-    if (info.lunarInfo.solarFestival) lines.push(`节日：${info.lunarInfo.solarFestival}`);
+    const { fullLabel, lunarMonth, lunarDay, jieqi, festival, solarFestival } = info.lunarInfo;
+    lines.push(t(`农历 ${fullLabel}`, `Lunar calendar: ${lunarMonthLabel(lunarMonth)}, day ${lunarDay}`));
+    if (jieqi) lines.push(t(`节气：${jieqi}`, `Solar term: ${termsLabel(jieqi)}`));
+    if (festival) lines.push(t(`传统节日：${festival}`, `Traditional festival: ${holidayLabel(festival)}`));
+    if (solarFestival) lines.push(t(`节日：${solarFestival}`, `Festival: ${holidayLabel(solarFestival)}`));
   }
   return lines;
 }
@@ -156,7 +166,7 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
     cell.classList.add('day--weekend');
   }
   const titleParts = describeDayText(info);
-  if (leaveDates && leaveDates.has(dateStr)) titleParts.push('拼假攻略：建议请假');
+  if (leaveDates && leaveDates.has(dateStr)) titleParts.push(t('拼假攻略：建议请假', 'Leave planner: suggested day off'));
   if (titleParts.length > 0) {
     cell.title = titleParts.join(' · ');
     cell.setAttribute('aria-label', `${dateStr} ${titleParts.join('，')}`);
@@ -171,15 +181,15 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
   let tagText = '';
   let tagKind = '';
   if (meta) {
-    tagText = meta.isOffDay ? meta.name : '班';
+    tagText = meta.isOffDay ? holidayLabel(meta.name) : t('班', 'Work');
   } else if (lunarInfo && (lunarInfo.festival || lunarInfo.solarFestival)) {
-    tagText = lunarInfo.festival || lunarInfo.solarFestival;
+    tagText = holidayLabel(lunarInfo.festival || lunarInfo.solarFestival);
     tagKind = 'festival';
   } else if (lunarInfo && lunarInfo.jieqi) {
-    tagText = lunarInfo.jieqi;
+    tagText = termsLabel(lunarInfo.jieqi);
     tagKind = 'jieqi';
   } else if (lunarInfo) {
-    tagText = lunarInfo.dayLabel;
+    tagText = english() ? `${lunarInfo.lunarMonth < 0 ? 'L' : ''}${Math.abs(lunarInfo.lunarMonth)}/${lunarInfo.lunarDay}` : lunarInfo.dayLabel;
     tagKind = 'lunar';
   }
 
@@ -203,5 +213,5 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
 }
 
 export function monthTitle(year, month) {
-  return `${year} 年 ${MONTH_NAMES[month - 1]}`;
+  return english() ? dateLabel(new Date(year, month - 1, 1), { year: 'numeric', month: 'long' }) : `${year} 年 ${MONTH_NAMES[month - 1]}`;
 }

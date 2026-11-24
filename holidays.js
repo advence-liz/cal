@@ -1,21 +1,27 @@
-// Data layer: holiday-cn JSON. Local vendored copy first
-// (data/holidays-YYYY.json, refreshed by holiday-vendor.yml), jsDelivr CDN as
-// fallback; cache in localStorage; expose an in-memory dataStore consumed by
-// workday.js. Local-first exists because cdn.jsdelivr.net is unreliable
-// inside mainland China — vendoring makes the site zero-external-dependency.
+// Holiday schedules expose the same Map<year, Map<date, day>> for each region.
+// CN keeps its existing local/CDN/cache chain; US and SG use bundled snapshots.
+
+export const DEFAULT_REGION = 'CN';
+export const REGIONS = {
+  CN: { source: 'https://github.com/NateScarlet/holiday-cn', label: 'NateScarlet/holiday-cn', scope: '国务院办公厅口径，含调休补班' },
+  US: { source: 'https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/', label: '美国人事管理局（OPM）', scope: '全国联邦假期，按周一至周五排班的实际休假日；不含州假，私企以雇主安排为准', file: 'data/holidays-us.json' },
+  SG: { source: 'https://www.mom.gov.sg/employment-practices/public-holidays', label: '新加坡人力部（MOM）', scope: '按周一至周五上班、周日为休息日计算；周六假日不自动补到周一', file: 'data/holidays-sg.json' },
+};
 
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master';
 const TTL_MS = 7 * 24 * 3600 * 1000;
 const cacheKey = (year) => `holiday-cn:${year}`;
 
-const dataStore = new Map(); // Map<year, Map<dateStr, {name, isOffDay}>>
+const stores = new Map(Object.keys(REGIONS).map((region) => [region, new Map()]));
+const pending = new Map();
+const dataStore = stores.get(DEFAULT_REGION);
 
-export function getDataStore() {
-  return dataStore;
+export function getDataStore(region = DEFAULT_REGION) {
+  return stores.get(region);
 }
 
-export function hasYear(year) {
-  return dataStore.has(year);
+export function hasYear(year, region = DEFAULT_REGION) {
+  return getDataStore(region).has(year);
 }
 
 function readCache(year) {
@@ -104,8 +110,44 @@ async function loadOneYear(year) {
   }
 }
 
-// Load multiple years concurrently. Returns array of results.
-export async function loadYears(years) {
+// Every date is indexed by the year in which the day off actually falls.
+// An occurrence key still uses the original holiday's year for countdowns.
+async function fetchRegion(region) {
+  if (!pending.has(region)) {
+    const request = (async () => {
+      const res = await fetch(REGIONS[region].file);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { years } = await res.json();
+      const entries = Object.entries(years);
+      if (!entries.length || entries.some(([, days]) => !Array.isArray(days) || !days.length)) {
+        throw new Error('Invalid holiday snapshot');
+      }
+      const loaded = entries.map(([year, days]) => [Number(year), new Map(days.map(
+        ([date, name, observedFor]) => [date, {
+          name, isOffDay: true, holidayId: `${(observedFor || date).slice(0, 4)}:${name}`,
+          ...(observedFor ? { observedFor } : {}),
+        }]
+      ))]);
+      const store = getDataStore(region);
+      for (const [year, days] of loaded) store.set(year, days);
+    })().catch((error) => {
+      pending.delete(region); // retry on the next request
+      throw error;
+    });
+    pending.set(region, request);
+  }
+  return pending.get(region);
+}
+
+// Load multiple years, preserving the CN return statuses and legacy callers.
+export async function loadYears(years, region = DEFAULT_REGION) {
   const unique = [...new Set(years)];
-  return Promise.all(unique.map(loadOneYear));
+  if (region === DEFAULT_REGION) return Promise.all(unique.map(loadOneYear));
+  if (!unique.length) return [];
+  try {
+    await fetchRegion(region);
+    return unique.map((year) => ({ year, source: hasYear(year, region) ? 'local' : 'unavailable' }));
+  } catch (error) {
+    return unique.map((year) => ({ year, source: 'failed', error }));
+  }
 }

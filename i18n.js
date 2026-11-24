@@ -1,0 +1,49 @@
+// Display language only. Dates used for calculations and the active holiday
+// region are deliberately independent of this preference.
+export const LANGUAGE_KEY = 'cal:language';
+let language = 'zh-CN';
+export const getLanguage = () => language;
+export const setLanguage = (value) => { language = value === 'en' ? 'en' : 'zh-CN'; };
+export const english = () => language === 'en';
+export const t = (zh, en) => english() ? en : zh;
+export const dateLabel = (date, options) => new Intl.DateTimeFormat(language, options).format(date);
+export const daysLabel = (n, noun = 'day') => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
+const holidayEn = {
+  元旦: 'New Year’s Day', 元旦节: 'New Year’s Day', 春节: 'Chinese New Year', 清明: 'Qingming Festival', 清明节: 'Qingming Festival',
+  劳动节: 'Labour Day', 端午: 'Dragon Boat Festival', 端午节: 'Dragon Boat Festival', 中秋: 'Mid-Autumn Festival', 中秋节: 'Mid-Autumn Festival', 国庆: 'National Day', 国庆节: 'National Day',
+  '马丁·路德·金纪念日': 'Martin Luther King Jr. Day', 华盛顿诞辰: 'Washington’s Birthday', 阵亡将士纪念日: 'Memorial Day', 六月节: 'Juneteenth',
+  美国独立日: 'Independence Day', 美国劳动节: 'Labor Day', 哥伦布日: 'Columbus Day', 退伍军人节: 'Veterans Day', 感恩节: 'Thanksgiving', 圣诞节: 'Christmas Day',
+  开斋节: 'Hari Raya Puasa', 耶稣受难日: 'Good Friday', 投票日: 'Polling Day', 卫塞节: 'Vesak Day', 哈芝节: 'Hari Raya Haji', 新加坡国庆日: 'National Day', 屠妖节: 'Deepavali',
+  除夕: 'Chinese New Year’s Eve', 元宵节: 'Lantern Festival', 龙抬头: 'Dragon Head Festival', 七夕节: 'Qixi Festival', 中元节: 'Ghost Festival', 重阳节: 'Double Ninth Festival', 腊八节: 'Laba Festival', 小年: 'Little New Year',
+};
+export function holidayLabel(name) {
+  if (!english()) return name;
+  return name.split('、').map((part) => Object.hasOwn(holidayEn, part) ? holidayEn[part] : part).join(' / ');
+}
+
+const activityEn = {
+  出行: 'Travel', 移徙: 'Move', 入宅: 'Move in', 嫁娶: 'Marry', 订盟: 'Get engaged', 开市: 'Open a business', 理发: 'Get a haircut', 装修: 'Renovate', 安床: 'Set up a bed',
+};
+export const activityName = ({ term, label }) => english() ? activityEn[term] || label : label;
+
+const staticText = {
+  appTitle: ['摸鱼日历', 'Moyu Calendar'], regionTitle: ['假期地区', 'Holiday region'],
+  regionCN: ['中国大陆', 'Mainland China'], regionUS: ['美国联邦', 'US Federal'], regionSG: ['新加坡', 'Singapore'],
+  today: ['回到今天', 'Today'], todayShort: ['今天', 'Today'],
+  weekday1: ['一', 'Mon'], weekday2: ['二', 'Tue'], weekday3: ['三', 'Wed'], weekday4: ['四', 'Thu'], weekday5: ['五', 'Fri'], weekday6: ['六', 'Sat'], weekday0: ['日', 'Sun'],
+  holiday: ['法定假', 'Public holiday'], makeup: ['调休补班', 'Make-up workday'], weekend: ['周末', 'Weekend'], suitable: ['宜（筛选中）', 'Suitable (filtered)'],
+  yi: ['宜', 'Suitable'], ji: ['忌', 'Avoid'], leaveTitle: ['🎉 拼假攻略', '🎉 Leave planner'], leaveLabel: ['拼假攻略', 'Leave planner'],
+  leaveCoverage: ['拼假攻略仅覆盖已收录假期数据的连续日期。', 'Plans only cover dates with confirmed holiday data.'], countTitle: ['区间工作日数', 'Count workdays'], addTitle: ['N 个工作日后', 'Add workdays'],
+  start: ['起：', 'From:'], end: ['止：', 'To:'], calculate: ['计算', 'Calculate'],
+  addNote: ['N 可为负（向前数）。N=0 返回起始日本身。', 'Use a negative N to go back. Zero returns the start date.'], source: ['数据源：', 'Source:'],
+  prev: ['上月', 'Previous month'], next: ['下月', 'Next month'], theme: ['切换深色模式', 'Toggle dark mode'],
+  activityLabel: ['按活动筛选宜办的日子', 'Filter suitable dates by activity'], findActivity: ['找最近一天 →', 'Find next date →'],
+  legacyNote: ['术语和详细解释保留中文原文。', 'Traditional terms and detailed notes are shown in Chinese.'],
+};
+export function translateStatic(root) {
+  for (const el of root.querySelectorAll('[data-i18n]')) el.textContent = t(...staticText[el.dataset.i18n]);
+  for (const el of root.querySelectorAll('[data-i18n-label]')) el.setAttribute('aria-label', t(...staticText[el.dataset.i18nLabel]));
+  root.documentElement.lang = language;
+  root.title = t(...staticText.appTitle);
+}

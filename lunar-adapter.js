@@ -23,6 +23,8 @@ export function getDayInfo(dateStr) {
 
   return {
     date: dateStr,
+    lunarMonth: lunar.getMonth(), // negative for leap months
+    lunarDay: day,
     // Convention: show the lunar month name on day 1 instead of "初一".
     dayLabel: day === 1 ? `${lunar.getMonthInChinese()}月` : lunar.getDayInChinese(),
     fullLabel: `${lunar.getYearInGanZhi()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,

@@ -19,6 +19,15 @@ export function yearsInRange(fromDate, horizonDays = DEFAULT_HORIZON_DAYS) {
   return years;
 }
 
+// Never build a leave plan through years where the holiday schedule is unknown.
+export function coveredDays(fromDate, horizonDays, store) {
+  for (const year of yearsInRange(fromDate, horizonDays)) {
+    if (!store.has(year)) {
+      return Math.max(0, Math.round((parseDate(`${year}-01-01`) - parseDate(fromDate)) / 86400000));
+    }
+  }
+  return horizonDays;
+}
 
 function dayInfo(dataStore, dateStr) {
   const year = Number(dateStr.slice(0, 4));

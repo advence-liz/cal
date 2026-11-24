@@ -1,0 +1,109 @@
+name: Check US and Singapore holiday data
+
+on:
+  schedule:
+    - cron: '23 4 * * 2' # Weekly, Tuesday 04:23 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# Avoid duplicate pushes/PR creation from overlapping schedule/manual runs.
+concurrency:
+  group: holiday-vendor-intl-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  vendor:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        region: [us, sg]
+    env:
+      REGION: ${{ matrix.region }}
+      BASE_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test official-source parsers
+        run: python3 -B -m unittest discover -s scripts -p 'test_vendor_holidays_intl.py'
+
+      - name: Check official data
+        id: vendor
+        run: |
+          set -o pipefail
+          python3 -I scripts/vendor_holidays_intl.py "$REGION" --apply | tee "$RUNNER_TEMP/holiday-vendor.log"
+          grep -E '^changed=(true|false)$' "$RUNNER_TEMP/holiday-vendor.log" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.vendor.outputs.changed == 'true'
+        with:
+          node-version: 24
+
+      - name: Test the proposed data in the browser
+        if: steps.vendor.outputs.changed == 'true'
+        run: |
+          npm ci
+          npm exec -- puppeteer browsers install chrome
+          python3 -I -m http.server 8080 --bind 127.0.0.1 &
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8080/tests.html >/dev/null; then
+              npm test
+              exit $?
+            fi
+            sleep 0.5
+          done
+          echo "Test server failed to start" >&2
+          exit 1
+
+      - name: Open or refresh a review-only pull request
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGED: ${{ steps.vendor.outputs.changed }}
+        run: |
+          branch="automation/holiday-vendor-$REGION"
+          path="data/holidays-$REGION.json"
+          pr=$(gh pr list --head "$branch" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [[ "$CHANGED" != true ]]; then
+            if [[ -n "$pr" ]]; then
+              echo "::warning::Official data now matches the base branch. Review or close the stale holiday update PR #$pr."
+            fi
+            exit 0
+          fi
+
+          remote=$(git ls-remote --heads origin "refs/heads/$branch")
+          sha=${remote%%[[:space:]]*}
+          if [[ -n "$sha" ]]; then
+            git fetch --no-tags origin "refs/heads/$branch"
+            if [[ -n "$pr" ]] && git show "FETCH_HEAD:$path" | cmp -s - "$path"; then
+              echo "Existing PR #$pr already contains the proposed data."
+              exit 0
+            fi
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$path"
+          git commit -m "chore: refresh $REGION holidays from official sources" \
+            -m 'Co-Authored-By: Claude Code <noreply@anthropic.com>'
+          git push --force-with-lease="refs/heads/$branch:$sha" origin "HEAD:refs/heads/$branch"
+
+          body="$RUNNER_TEMP/holiday-pr.md"
+          {
+            printf '%s\n\n' 'Official holiday data changed. Parser checks and browser tests passed. Review the date changes before merging.'
+            grep -E '^(US|SG) confirmed upstream:' "$RUNNER_TEMP/holiday-vendor.log"
+            printf '\n%s\n' '🤖 Generated with [Claude Code](https://claude.com/claude-code)'
+          } > "$body"
+          if [[ -n "$pr" ]]; then
+            gh pr edit "$pr" --body-file "$body"
+          else
+            gh pr create --base "$BASE_BRANCH" --head "$branch" \
+              --title "chore: refresh $REGION holidays" --body-file "$body"
+          fi

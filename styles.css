@@ -144,7 +144,22 @@ body {
   gap: 0.6rem;
 }
 
+.language-toggle {
+  flex: none;
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.language-toggle:hover { background: var(--hover); color: var(--text); }
+
 .theme-toggle {
+  flex: none;
   background: var(--alt-bg);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -183,6 +198,10 @@ body {
   /* 窄屏只保留最近一个假期倒计时，第二个与剩余工作日让位 */
   .next-holiday__second,
   .workday-remaining { display: none; }
+  .topbar { padding-inline: 1rem; }
+  .topbar h1 { font-size: 1.1rem; }
+  .topbar-right { max-width: 100%; }
+  .next-holiday { min-width: 0; }
 }
 
 .status-bar {
@@ -219,7 +238,12 @@ body {
     text-overflow: ellipsis;
   }
   .status-bar:not([data-kind="teaser"]) { padding: 0.4rem 0.75rem; }
-  .status-bar__teaser-btn { padding: 0.4rem 0.75rem; }
+  .status-bar__teaser-btn {
+    padding: 0.4rem 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 @keyframes tool-card-flash {
@@ -314,6 +338,121 @@ body {
   .cal-nav button { padding: 0.3rem 0.55rem; font-size: 0.85rem; }
   .cal-nav .today-btn { margin-left: 0.25rem; }
 }
+
+.topbar-brand {
+  position: relative;
+  display: grid;
+  grid-template-columns: max-content max-content;
+  align-items: center;
+  gap: 0.12rem 0.85rem;
+}
+.topbar h1 { white-space: nowrap; }
+.region-clock {
+  grid-column: 1 / -1;
+  margin: 0 0 0 2rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+.region-clock time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+.region-clock__offset { margin-inline-start: 0.3rem; white-space: nowrap; }
+.region-picker { position: relative; }
+.region-picker summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  list-style: none;
+  cursor: pointer;
+}
+.region-picker summary::-webkit-details-marker { display: none; }
+.region-picker summary:hover,
+.region-picker[open] summary { background: var(--hover); }
+.region-picker summary:focus-visible,
+.region-menu button:focus-visible { outline: 2px solid var(--today); outline-offset: 2px; }
+.region-globe { width: 0.95rem; height: 0.95rem; color: var(--muted); }
+.region-chevron { width: 0.7rem; height: 0.7rem; color: var(--muted); }
+.region-picker[open] .region-chevron { transform: rotate(180deg); }
+.region-menu {
+  position: absolute;
+  z-index: 70;
+  inset-block-start: calc(100% + 0.4rem);
+  inset-inline-start: 0;
+  width: 15rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 16%);
+}
+.region-menu p {
+  margin: 0;
+  padding: 0.35rem 0.55rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.region-menu button {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.35rem 1.75rem 0.35rem 0.55rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: start;
+  cursor: pointer;
+}
+.region-menu button:hover { background: var(--hover); }
+.region-menu button[aria-pressed="true"] { background: var(--hover); font-weight: 600; }
+.region-menu button[aria-pressed="true"]::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 0.72rem;
+  inset-inline-end: 0.78rem;
+  width: 0.35rem;
+  height: 0.6rem;
+  border: solid var(--today);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.region-menu .region-scope {
+  margin-top: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 480px) {
+  .region-picker { position: static; }
+}
+
+.almanac-shelf { margin-top: 0.5rem; }
+.almanac-shelf .activity-filters-wrap { margin-top: 0.3rem; }
+.almanac-toggle {
+  padding: 0.35rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.almanac-toggle:hover { text-decoration: underline; color: var(--text); }
+.almanac-toggle::after { content: ' ▾'; }
+.almanac-toggle[aria-expanded="true"]::after { content: ' ▴'; }
 
 .activity-filters-wrap {
   margin-bottom: 0.5rem;
@@ -594,6 +733,11 @@ body {
 .almanac-tag--empty { background: var(--alt-bg); color: var(--muted); border-left-color: transparent; }
 
 .almanac-detail { margin-top: 0.6rem; }
+:root[lang="en"] .almanac-label {
+  width: 4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+}
 
 .day-detail__facts {
   margin-top: 0.6rem;

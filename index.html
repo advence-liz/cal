@@ -25,11 +25,34 @@
 </head>
 <body>
   <header class="topbar">
-    <h1><img src="icon.svg" alt="" class="app-logo" width="24" height="24">摸鱼日历</h1>
+    <div class="topbar-brand">
+      <h1><img src="icon.svg" alt="" class="app-logo" width="24" height="24"><span data-i18n="appTitle">摸鱼日历</span></h1>
+      <details class="region-picker" id="holidayRegion">
+        <summary id="regionTrigger" aria-label="假期地区：中国大陆">
+          <svg class="region-globe" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+            <circle cx="8" cy="8" r="6"/><ellipse cx="8" cy="8" rx="2.6" ry="6"/><path d="M2 8h12"/>
+          </svg>
+          <span id="regionLabel">中国大陆</span>
+          <svg class="region-chevron" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
+        </summary>
+        <div class="region-menu" role="group" aria-labelledby="regionMenuTitle" aria-describedby="holidayScope">
+          <p id="regionMenuTitle" data-i18n="regionTitle">假期地区</p>
+          <button type="button" data-region="CN" data-i18n="regionCN" aria-pressed="true">中国大陆</button>
+          <button type="button" data-region="US" data-i18n="regionUS" aria-pressed="false">美国联邦</button>
+          <button type="button" data-region="SG" data-i18n="regionSG" aria-pressed="false">新加坡</button>
+          <p class="region-scope" id="holidayScope">国务院办公厅口径，含调休补班</p>
+        </div>
+      </details>
+      <p class="region-clock" id="regionClock" hidden>
+        <span id="regionClockCity"></span> <time id="regionClockTime"></time>
+        <span class="region-clock__offset" id="regionClockOffset"></span>
+      </p>
+    </div>
     <div class="topbar-right">
       <div class="next-holiday" id="nextHoliday">加载中…</div>
       <div class="workday-remaining" id="workdayRemaining" hidden></div>
-      <button id="themeToggle" type="button" class="theme-toggle" aria-label="切换深色模式">🌙</button>
+      <button id="languageToggle" type="button" class="language-toggle" lang="en">English</button>
+      <button data-i18n-label="theme" id="themeToggle" type="button" class="theme-toggle" aria-label="切换深色模式">🌙</button>
     </div>
   </header>
 
@@ -38,39 +61,43 @@
   <main class="main">
     <section class="cal-panel">
       <div class="cal-nav">
-        <button id="prevMonth" type="button" aria-label="上月">‹</button>
+        <button id="prevMonth" type="button" aria-label="上月" data-i18n-label="prev">‹</button>
         <h2 id="monthTitle">—</h2>
-        <button id="nextMonth" type="button" aria-label="下月">›</button>
-        <button id="todayBtn" type="button" class="today-btn">回到今天</button>
+        <button id="nextMonth" type="button" aria-label="下月" data-i18n-label="next">›</button>
+        <button id="todayBtn" data-i18n="today" type="button" class="today-btn">回到今天</button>
       </div>
 
-      <div class="activity-filters-wrap">
-        <p class="activity-filters__hint">按活动看这个月宜办的日子：</p>
-        <div class="activity-filters" id="activityFilters" role="group" aria-label="按活动筛选宜办的日子"></div>
+      <div class="activity-filters-wrap" id="activityPanel">
+        <p class="activity-filters__hint" id="activityPrompt">按活动看这个月宜办的日子：</p>
+        <div class="activity-filters" id="activityFilters" data-i18n-label="activityLabel" role="group" aria-label="按活动筛选宜办的日子"></div>
         <p class="activity-filters__status" id="activityFiltersStatus" role="status" aria-live="polite" hidden>
           <span id="activityFiltersStatusText"></span>
-          <button type="button" class="activity-find-btn" id="activityFindBtn">找最近一天 →</button>
+          <button type="button" class="activity-find-btn" id="activityFindBtn" data-i18n="findActivity">找最近一天 →</button>
         </p>
       </div>
 
       <div class="cal-grid" id="calGrid">
-        <div class="cal-head">一</div>
-        <div class="cal-head">二</div>
-        <div class="cal-head">三</div>
-        <div class="cal-head">四</div>
-        <div class="cal-head">五</div>
-        <div class="cal-head sat">六</div>
-        <div class="cal-head sun">日</div>
+        <div class="cal-head" data-i18n="weekday1">一</div>
+        <div class="cal-head" data-i18n="weekday2">二</div>
+        <div class="cal-head" data-i18n="weekday3">三</div>
+        <div class="cal-head" data-i18n="weekday4">四</div>
+        <div class="cal-head" data-i18n="weekday5">五</div>
+        <div class="cal-head sat" data-i18n="weekday6">六</div>
+        <div class="cal-head sun" data-i18n="weekday0">日</div>
       </div>
 
       <div class="day-popover" id="dayPopover" hidden role="tooltip"></div>
 
       <div class="legend">
-        <span><i class="dot dot--holiday"></i>法定假</span>
-        <span><i class="dot dot--makeup"></i>调休补班</span>
-        <span><i class="dot dot--weekend"></i>周末</span>
-        <span><i class="dot dot--today"></i>今天</span>
-        <span><i class="dot dot--suits"></i>宜（筛选中）</span>
+        <span><i class="dot dot--holiday"></i><span data-i18n="holiday">法定假</span></span>
+        <span id="makeupLegend"><i class="dot dot--makeup"></i><span data-i18n="makeup">调休补班</span></span>
+        <span><i class="dot dot--weekend"></i><span data-i18n="weekend">周末</span></span>
+        <span><i class="dot dot--today"></i><span data-i18n="todayShort">今天</span></span>
+        <span id="suitsLegend"><i class="dot dot--suits"></i><span data-i18n="suitable">宜（筛选中）</span></span>
+      </div>
+
+      <div id="almanacShelf" class="almanac-shelf" hidden>
+        <button type="button" id="almanacToggle" class="almanac-toggle" aria-controls="activityPanel" aria-expanded="false">显示农历宜忌</button>
       </div>
 
       <div class="day-detail" id="dayDetail" hidden>
@@ -78,61 +105,61 @@
         <ul class="day-detail__lines" id="dayDetailLines"></ul>
         <div class="almanac-detail" id="almanacDetail">
           <div class="almanac-row almanac-row--yi">
-            <span class="almanac-label almanac-label--yi">宜</span>
+            <span class="almanac-label almanac-label--yi" data-i18n="yi">宜</span>
             <div class="almanac-tags" id="almanacYi"></div>
           </div>
           <div class="almanac-row almanac-row--ji">
-            <span class="almanac-label almanac-label--ji">忌</span>
+            <span class="almanac-label almanac-label--ji" data-i18n="ji">忌</span>
             <div class="almanac-tags" id="almanacJi"></div>
           </div>
+          <p id="almanacTranslationNote" class="hint" data-i18n="legacyNote" hidden></p>
           <div class="day-detail__facts" id="dayDetailFacts"></div>
         </div>
       </div>
     </section>
 
-    <aside class="leave-side" aria-label="拼假攻略">
+    <aside class="leave-side" aria-label="拼假攻略" data-i18n-label="leaveLabel">
       <article class="tool-card tool-card--featured" id="leavePlanCard">
-        <h3>🎉 拼假攻略</h3>
+        <h3 data-i18n="leaveTitle">🎉 拼假攻略</h3>
         <div class="leave-plan-list" id="leavePlanResult"></div>
-        <small class="hint">近期每个法定节假日性价比最高的拼假方式，自动列出。</small>
+        <small class="hint" id="leaveCoverage" data-i18n="leaveCoverage" hidden>拼假攻略仅覆盖已收录假期数据的连续日期。</small>
       </article>
     </aside>
 
     <aside class="tools">
       <article class="tool-card">
-        <h3>区间工作日数</h3>
+        <h3 data-i18n="countTitle">区间工作日数</h3>
         <form id="countForm">
-          <label>起：<input type="date" name="start" required></label>
-          <label>止：<input type="date" name="end" required></label>
-          <button type="submit">计算</button>
+          <label><span data-i18n="start">起：</span><input type="date" name="start" required></label>
+          <label><span data-i18n="end">止：</span><input type="date" name="end" required></label>
+          <button type="submit" data-i18n="calculate">计算</button>
         </form>
         <output class="result" id="countResult"></output>
       </article>
 
       <article class="tool-card">
-        <h3>N 个工作日后</h3>
+        <h3 data-i18n="addTitle">N 个工作日后</h3>
         <form id="addForm">
-          <label>起：<input type="date" name="start" required></label>
+          <label><span data-i18n="start">起：</span><input type="date" name="start" required></label>
           <label>N：<input type="number" name="n" required step="1" value="5"></label>
-          <button type="submit">计算</button>
+          <button type="submit" data-i18n="calculate">计算</button>
         </form>
         <output class="result" id="addResult"></output>
-        <small class="hint">N 可为负（向前数）。N=0 返回起始日本身。</small>
+        <small class="hint" data-i18n="addNote">N 可为负（向前数）。N=0 返回起始日本身。</small>
       </article>
     </aside>
   </main>
 
   <div class="mobile-nav-bar" id="mobileNavBar">
-    <button id="prevMonthMobile" type="button" aria-label="上月">‹</button>
+    <button id="prevMonthMobile" type="button" aria-label="上月" data-i18n-label="prev">‹</button>
     <span id="monthTitleMobile">—</span>
-    <button id="nextMonthMobile" type="button" aria-label="下月">›</button>
-    <button id="todayBtnMobile" type="button">今天</button>
+    <button id="nextMonthMobile" type="button" aria-label="下月" data-i18n-label="next">›</button>
+    <button id="todayBtnMobile" data-i18n="todayShort" type="button">今天</button>
   </div>
 
   <footer class="foot">
-    数据源：
-    <a href="https://github.com/NateScarlet/holiday-cn" target="_blank" rel="noopener">NateScarlet/holiday-cn</a>
-    （国务院办公厅口径，含调休）
+    <span data-i18n="source">数据源：</span>
+    <a id="holidaySource" href="https://github.com/NateScarlet/holiday-cn" target="_blank" rel="noopener">NateScarlet/holiday-cn</a>
   </footer>
 
   <script src="vendor/lunar.js"></script>

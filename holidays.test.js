@@ -1,4 +1,8 @@
 import { loadYears, getDataStore } from './holidays.js';
+import { addWorkdays, countWorkdays, nextHolidays } from './workday.js';
+import * as bridgePlan from './bridge-plan.js';
+import { describeDay, describeDayText } from './calendar.js';
+import { holidayLabel, getLanguage, setLanguage } from './i18n.js';
 import { makeRunner } from './test-harness.js';
 
 // Integration-style suite: fetches real files over HTTP, so it needs the
@@ -38,6 +42,69 @@ export async function runTests() {
   await checkAsync('5. TTL 缓存命中：再次加载同一年直接用缓存（source=cache）', async () => {
     const [r] = await loadYears([2026]); // 前面已写过 fetchedAt=now 的缓存
     eq(r.source, 'cache');
+  });
+
+  await checkAsync('6. 三国同年并发加载，不串用数据或缓存', async () => {
+    const results = await Promise.all(['CN', 'US', 'SG'].map((region) => loadYears([2027], region)));
+    eq(results.slice(1).map(([r]) => r.source), ['local', 'local']);
+    const cn = getDataStore('CN');
+    const us = getDataStore('US');
+    const sg = getDataStore('SG');
+    eq(cn.get(2027).get('2027-01-31').isOffDay, false);
+    eq(us.get(2027).has('2027-02-08'), false);
+    eq(sg.get(2027).has('2027-02-08'), true);
+    eq(cn.get(2027).has('2027-12-31'), false);
+  });
+
+  await checkAsync('7. 美国：2028 元旦的补休归入 2027，且不与 2027 元旦去重', async () => {
+    const us = getDataStore('US');
+    eq(us.get(2027).get('2027-12-31').observedFor, '2028-01-01');
+    eq(us.get(2027).get('2027-07-05').observedFor, '2027-07-04');
+    eq(countWorkdays('2027-12-30', '2027-12-31', us), 1);
+    eq(nextHolidays('2026-12-31', new Map([[2027, us.get(2027)]]), 20)
+      .filter((h) => h.name === '元旦').map((h) => h.date), ['2027-01-01', '2027-12-31']);
+    eq(us.get(2025).get('2025-01-20').name, '马丁·路德·金纪念日');
+  });
+
+  await checkAsync('8. 新加坡：周日补休、周六不自动补休；拼假也用同一口径', async () => {
+    const sg = getDataStore('SG');
+    eq(sg.get(2027).get('2027-02-08').observedFor, '2027-02-07');
+    eq(describeDayText(describeDay('2027-02-08', sg))[0], '春节 · 补休（原节日 2027-02-07）');
+    eq(addWorkdays('2027-02-05', 1, sg), '2027-02-09');
+    eq(addWorkdays('2027-04-30', 1, sg), '2027-05-03');
+    const [plan] = bridgePlan.suggestHolidayOpportunities(sg, { fromDate: '2027-02-05', horizonDays: 10 });
+    eq([plan.naturalStart, plan.naturalEnd, plan.naturalDays], ['2027-02-06', '2027-02-08', 3]);
+    eq(sg.get(2025).get('2025-05-03').name, '投票日');
+  });
+
+  await checkAsync('9. 超出数据范围不借用别国数据，拼假扫描停在缺年之前', async () => {
+    const [r] = await loadYears([2099], 'SG');
+    eq(r.source, 'unavailable');
+    const sg = getDataStore('SG');
+    eq(sg.has(2099), false);
+    // Test a deliberately bounded store; new official years should not break CI.
+    const through2027 = new Map([[2027, sg.get(2027)]]);
+    eq(bridgePlan.coveredDays('2027-12-30', 400, through2027), 2);
+    eq(bridgePlan.coveredDays('2028-01-01', 400, through2027), 0);
+  });
+
+  await checkAsync('10. 英文界面翻译三个地区已收录的假日，不修改原始数据', async () => {
+    const saved = getLanguage();
+    try {
+      setLanguage('en');
+      for (const region of ['CN', 'US', 'SG']) {
+        await loadYears([2025, 2026, 2027], region);
+        for (const yearStore of getDataStore(region).values()) {
+          for (const { name } of yearStore.values()) eq(/[㐀-鿿]/u.test(holidayLabel(name)), false);
+        }
+      }
+      eq(holidayLabel('国庆节、中秋节'), 'National Day / Mid-Autumn Festival');
+      const day = describeDay('2027-02-08', getDataStore('SG'));
+      eq(describeDayText(day)[0], 'Chinese New Year · Observed (original date 2027-02-07)');
+      eq(day.meta.name, '春节');
+    } finally {
+      setLanguage(saved);
+    }
   });
 
   return results;

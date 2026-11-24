@@ -1,6 +1,8 @@
 // Wiring: data load → calendar render → form bindings → countdown.
 
 import {
+  DEFAULT_REGION,
+  REGIONS,
   loadYears,
   getDataStore,
   hasYear,
@@ -8,14 +10,16 @@ import {
 import {
   countWorkdays,
   addWorkdays,
-  nextHoliday,
+  addDays,
   nextHolidays,
   formatDate,
   parseDate,
 } from './workday.js';
 import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, findNextSuitableDate, ACTIVITIES } from './calendar.js';
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
-import { suggestHolidayOpportunities, yearsInRange, groupDateRanges } from './bridge-plan.js';
+import { CLOCK_ZONES, regionClock } from './region-clock.js';
+import { LANGUAGE_KEY, activityName, dateLabel, daysLabel, english, getLanguage, holidayLabel, setLanguage, t, translateStatic } from './i18n.js';
+import { coveredDays, DEFAULT_HORIZON_DAYS, suggestHolidayOpportunities, yearsInRange, groupDateRanges } from './bridge-plan.js';
 
 // 微信内置浏览器允许缩放时，用户一旦双指缩放就会弹出微信自己的缩放控件
 // （这是 WeChat WebView 的行为，控件本身我们改不了）。只对微信 UA 关掉
@@ -46,7 +50,11 @@ function scrollBehavior() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 }
 
+const REGION_KEY = 'cal:holiday-region';
 const state = {
+  region: DEFAULT_REGION,
+  regionVersion: 0,
+  monthRequest: 0,
   year: 0,
   month: 0,
   today: '',
@@ -110,14 +118,17 @@ function clearLeaveTeaser() {
 // Turn one year's load outcome into a user-facing (non-technical) banner, or
 // null if that year's data is fine and any leftover banner should be cleared.
 function bannerForYearStatus(year, status, error) {
+  if (status === 'unavailable') {
+    return { msg: t(`ℹ️ 当前地区未收录 ${year} 年的假期数据，暂时按普通周末显示。`, `ℹ️ No holiday data for ${year} in this region. Only weekends are shown.`), kind: 'info' };
+  }
   if (status === 'failed') {
     if (error?.status === 404) {
-      return { msg: `ℹ️ ${year} 年度的法定节假日安排还没有公布，暂时按普通周末显示。`, kind: 'info' };
+      return { msg: t(`ℹ️ ${year} 年度的法定节假日安排还没有公布，暂时按普通周末显示。`, `ℹ️ The ${year} holiday schedule is not published yet. Only weekends are shown.`), kind: 'info' };
     }
-    return { msg: `⚠️ 假期数据暂时获取不到，${year} 年的日历先按普通周末显示，网络恢复后会自动补上节假日安排。`, kind: 'warn' };
+    return { msg: t(`⚠️ 假期数据暂时获取不到，${year} 年的日历先按普通周末显示，网络恢复后会自动补上节假日安排。`, `⚠️ Could not load ${year} holidays. Only weekends are shown for now.`), kind: 'warn' };
   }
   if (status === 'stale-cache') {
-    return { msg: `ℹ️ ${year} 年用的是之前保存的假期数据，可能不是最新的，网络恢复后会自动更新。`, kind: 'info' };
+    return { msg: t(`ℹ️ ${year} 年用的是之前保存的假期数据，可能不是最新的，网络恢复后会自动更新。`, `ℹ️ Showing previously saved ${year} holidays. This schedule may be out of date.`), kind: 'info' };
   }
   return null;
 }
@@ -126,29 +137,25 @@ function todayStr() {
   return formatDate(new Date());
 }
 
-async function ensureYears(years) {
-  const needed = years.filter((y) => !hasYear(y));
+const currentStore = () => getDataStore(state.region);
+
+async function ensureYears(years, region = state.region) {
+  const needed = years.filter((year) => !hasYear(year, region));
   if (needed.length === 0) return [];
-  return loadYears(needed);
+  return loadYears(needed, region);
 }
 
-function reportLoadResults(results) {
-  const failed = results.filter((r) => r.source === 'failed' && r.error?.status !== 404);
-  const unpublished = results.filter((r) => r.source === 'failed' && r.error?.status === 404);
-  const stale = results.filter((r) => r.source === 'stale-cache');
-
-  if (failed.length > 0) {
-    const years = failed.map((r) => r.year).join('、');
-    showBanner(`⚠️ ${years} 年的假期数据暂时获取不到，这些年份先按普通周末计算，网络恢复后会自动更新。`);
-  } else if (unpublished.length > 0) {
-    const years = unpublished.map((r) => r.year).join('、');
-    showBanner(`ℹ️ ${years} 年度的法定节假日安排还没有公布，暂时按普通周末计算。`);
-  } else if (stale.length > 0) {
-    const years = stale.map((r) => r.year).join('、');
-    showBanner(`ℹ️ ${years} 年用的是之前保存的假期数据，可能不是最新的，网络恢复后会自动更新。`);
-  } else {
-    hideBanner();
+function estimateNote(start, end, store) {
+  const firstYear = Number(start.slice(0, 4));
+  const lastYear = Number(end.slice(0, 4));
+  for (let year = firstYear; year <= lastYear; year++) {
+    if (!store.has(year)) return t('（缺少假期数据的年份仅按周末估算）', ' (weekend-only estimate for years without holiday data)');
   }
+  return '';
+}
+
+function renderCalendar() {
+  renderMonth(state.year, state.month, $('calGrid'), currentStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
 }
 
 // --- URL 深链接：#YYYY-MM 或 #YYYY-MM-DD（含选中日）---
@@ -178,73 +185,78 @@ async function gotoMonth(year, month) {
     console.error('gotoMonth: 拒绝非法年月', { year, month });
     return;
   }
+  const request = ++state.monthRequest;
+  const region = state.region;
   state.year = year;
   state.month = month;
 
   // Ensure data for displayed year + adjacent (other-month cells may bleed).
   const wanted = [year - 1, year, year + 1];
-  const results = await ensureYears(wanted);
+  const results = await ensureYears(wanted, region);
+  if (request !== state.monthRequest) return false;
 
   // The banner reflects the year actually on screen, not the whole prefetch
   // batch — a still-failing neighbor year (e.g. next year's data not yet
   // published) shouldn't keep flagging a perfectly fine displayed year, and
   // switching back to a year that loaded fine must clear any old banner.
   const displayedResult = results.find((r) => r.year === year);
-  const displayedStatus = displayedResult ? displayedResult.source : (hasYear(year) ? 'cache' : null);
+  const displayedStatus = displayedResult ? displayedResult.source : (hasYear(year, region) ? 'cache' : null);
   const banner = bannerForYearStatus(year, displayedStatus, displayedResult?.error);
   if (banner) showBanner(banner.msg, banner.kind); else hideBanner();
 
   $('monthTitle').textContent = monthTitle(year, month);
-  $('monthTitleMobile').textContent = `${year}年${month}月`;
-  renderMonth(year, month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
+  $('monthTitleMobile').textContent = t(`${year}年${month}月`, dateLabel(new Date(year, month - 1, 1), { year: 'numeric', month: 'short' }));
+  renderCalendar();
+  if ($('calGrid').querySelector('.day--selected')) showDayDetail(state.selected);
+  else $('dayDetail').hidden = true;
   updateHash();
+  return true;
 }
 
-function renderNextHoliday() {
-  // 展示最近两个法定假期："距元旦还有X天"之后用户自然想问"那春节呢"。
-  // 第二个假期在窄屏（≤480px）下由 CSS 隐藏，避免顶栏挤爆。
-  const results = nextHolidays(state.today, getDataStore(), 2);
+function renderNextHoliday(store) {
+  // 窄屏（≤480px）只显示最近一个假期。
+  const results = nextHolidays(state.today, store, 2);
   const el = $('nextHoliday');
   if (results.length === 0) {
-    el.textContent = '暂无后续法定假期数据';
+    el.textContent = t('暂无后续法定假期数据', 'No upcoming holiday data');
     el.classList.remove('has-data');
     return;
   }
   const fmt = ({ name, date, daysAway }) =>
-    `距 <strong>${name}</strong> 还有 <strong>${daysAway}</strong>&nbsp;天 (${date})`;
-  const second = results[1] ? `<span class="next-holiday__second">${fmt(results[1])}</span>` : '';
-  el.innerHTML = `${fmt(results[0])}${results[1] ? '&nbsp;·&nbsp;' + second : ''}`;
+    t(`距 <strong>${name}</strong> 还有 <strong>${daysAway}</strong>&nbsp;天 (${date})`, `<strong>${holidayLabel(name)}</strong> in <strong>${daysLabel(daysAway)}</strong>`);
+  const second = results[1] ? `<span class="next-holiday__second">&nbsp;·&nbsp;${fmt(results[1])}</span>` : '';
+  el.innerHTML = `${fmt(results[0])}${second}`;
   el.classList.add('has-data');
 }
 
 // 一眼可见的摸鱼进度：今年还剩多少个工作日（含今天，与计算工具口径一致）。
-function renderWorkdayRemaining() {
+function renderWorkdayRemaining(store) {
   const el = $('workdayRemaining');
-  el.hidden = false;
   const year = state.today.slice(0, 4);
-  try {
-    const remaining = countWorkdays(state.today, `${year}-12-31`, getDataStore());
-    el.innerHTML = `今年还剩 <strong>${remaining}</strong>&nbsp;个工作日`;
-    el.classList.add('has-data');
-  } catch {
-    el.textContent = ''; // 数据未就绪时不占位误导
-  }
+  const end = `${year}-12-31`;
+  const remaining = countWorkdays(state.today, end, store);
+  const estimated = !store.has(Number(year));
+  el.innerHTML = t(`今年还剩 <strong>${remaining}</strong>&nbsp;个工作日`, `<strong>${daysLabel(remaining, 'workday')}</strong> left this year`) +
+    (estimated ? t('（仅按周末估算）', ' (weekend-only estimate)') : '');
+  el.classList.add('has-data');
+  el.hidden = false;
 }
 
 // --- 日期详情面板（tap-to-view，弥补移动端没有 title hover 的问题）---
 function showDayDetail(dateStr) {
-  const info = describeDay(dateStr, getDataStore());
+  const info = describeDay(dateStr, currentStore());
   const d = parseDate(dateStr);
   $('dayDetailDate').textContent =
-    `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${WEEKDAY_CN[d.getDay()]}`;
+    t(`${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${WEEKDAY_CN[d.getDay()]}`,
+      dateLabel(d, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }));
   $('dayDetailLines').innerHTML = describeDayText(info).map((l) => `<li>${l}</li>`).join('');
 
   const yi = info.lunarInfo?.yi || [];
   const ji = info.lunarInfo?.ji || [];
   $('almanacYi').innerHTML = yi.map((t) => `<span class="almanac-tag almanac-tag--yi" data-term="${t}">${t}</span>`).join('')
-    || '<span class="almanac-tag almanac-tag--empty">无</span>';
+    || `<span class="almanac-tag almanac-tag--empty">${t('无', 'None')}</span>`;
   $('almanacJi').innerHTML = ji.map((t) => `<span class="almanac-tag almanac-tag--ji" data-term="${t}">${t}</span>`).join('')
-    || '<span class="almanac-tag almanac-tag--empty">无</span>';
+    || `<span class="almanac-tag almanac-tag--empty">${t('无', 'None')}</span>`;
 
   $('dayDetailFacts').innerHTML = describeDayFacts(info).map((f) =>
     `<p class="fact"><strong>${f.term}</strong>：${f.blurb}</p>`
@@ -260,22 +272,27 @@ function bindCount() {
     e.preventDefault();
     const start = form.start.value;
     const end = form.end.value;
-    if (!start || !end) return;
-    if (start > end) {
-      out.textContent = '⚠️ 起始日期不能晚于结束日期';
+    if (!start || !end || start > end) {
+      delete out.dataset.calculated;
+      if (!start || !end) return;
+      out.textContent = t('⚠️ 起始日期不能晚于结束日期', '⚠️ Start date must not be after the end date.');
       out.className = 'result error';
       return;
     }
+    out.dataset.calculated = 'true';
     const startY = Number(start.slice(0, 4));
     const endY = Number(end.slice(0, 4));
     const wanted = [];
     for (let y = startY; y <= endY; y++) wanted.push(y);
-    const results = await ensureYears(wanted);
-    if (results.length > 0) reportLoadResults(results);
+    const regionVersion = state.regionVersion;
+    const store = currentStore();
+    await ensureYears(wanted);
+    if (regionVersion !== state.regionVersion) return;
     try {
-      const n = countWorkdays(start, end, getDataStore());
+      const n = countWorkdays(start, end, store);
       const totalDays = Math.round((parseDate(end) - parseDate(start)) / 86400000) + 1;
-      out.innerHTML = `区间共 ${totalDays} 天，其中工作日 <strong>${n}</strong> 天`;
+      const note = estimateNote(start, end, store);
+      out.innerHTML = t(`区间共 ${totalDays} 天，其中工作日 <strong>${n}</strong> 天`, `${daysLabel(totalDays)} total, <strong>${daysLabel(n, 'workday')}</strong>`) + note;
       out.className = 'result ok';
     } catch (err) {
       out.textContent = '⚠️ ' + err.message;
@@ -292,21 +309,27 @@ function bindAdd() {
     const start = form.start.value;
     const n = Number(form.n.value);
     if (!start || !Number.isInteger(n)) {
-      out.textContent = '⚠️ 请输入有效日期与整数 N';
+      delete out.dataset.calculated;
+      out.textContent = t('⚠️ 请输入有效日期与整数 N', '⚠️ Enter a valid date and a whole number.');
       out.className = 'result error';
       return;
     }
+    out.dataset.calculated = 'true';
     // Walking N workdays can cross years. Pre-load a generous window.
     const startY = Number(start.slice(0, 4));
     // ~250 workdays per year, so |n|/200 years buffer, min 1.
     const yearsSpan = Math.max(1, Math.ceil(Math.abs(n) / 200));
     const wanted = [];
     for (let dy = -yearsSpan; dy <= yearsSpan; dy++) wanted.push(startY + dy);
-    const results = await ensureYears(wanted);
-    if (results.length > 0) reportLoadResults(results);
+    const regionVersion = state.regionVersion;
+    const store = currentStore();
+    await ensureYears(wanted);
+    if (regionVersion !== state.regionVersion) return;
     try {
-      const result = addWorkdays(start, n, getDataStore());
-      out.innerHTML = `结果：<strong>${result}</strong>`;
+      const result = addWorkdays(start, n, store);
+      const first = n === 0 ? start : addDays(start, Math.sign(n));
+      const note = n === 0 ? '' : estimateNote(first < result ? first : result, first > result ? first : result, store);
+      out.innerHTML = `${t('结果：', 'Result: ')}<strong>${result}</strong>${note}`;
       out.className = 'result ok';
     } catch (err) {
       out.textContent = '⚠️ ' + err.message;
@@ -318,7 +341,8 @@ function bindAdd() {
 // --- 拼假攻略：浏览近期每个法定节假日的自然连休 + 最划算的加钱升级 ---
 function formatLeaveDateLabel(dateStr) {
   const d = parseDate(dateStr);
-  return `${d.getMonth() + 1}月${d.getDate()}日(周${WEEKDAY_CN[d.getDay()]})`;
+  return t(`${d.getMonth() + 1}月${d.getDate()}日(周${WEEKDAY_CN[d.getDay()]})`,
+    dateLabel(d, { weekday: 'short', month: 'short', day: 'numeric' }));
 }
 
 // 紧凑展示：单日保留周几（"6月10日(周四)"），连续日合并成区间（"4月6~9日"）。
@@ -327,6 +351,10 @@ function formatLeaveRangeLabel({ start, end }) {
   if (start === end) return formatLeaveDateLabel(start);
   const s = parseDate(start);
   const e = parseDate(end);
+  if (english()) {
+    const options = { month: 'short', day: 'numeric', ...(start.slice(0, 4) !== end.slice(0, 4) ? { year: 'numeric' } : {}) };
+    return `${dateLabel(s, options)}–${dateLabel(e, options)}`;
+  }
   if (start.slice(0, 4) !== end.slice(0, 4)) {
     return `${s.getFullYear()}年${s.getMonth() + 1}月${s.getDate()}日 ~ ${e.getFullYear()}年${e.getMonth() + 1}月${e.getDate()}日`;
   }
@@ -357,7 +385,7 @@ function bindLeavePlan() {
   function renderList(list) {
     currentList = list;
     if (list.length === 0) {
-      out.innerHTML = '<p class="hint">近期暂时没有查到法定节假日安排（可能还没公布），过阵子再来看看。</p>';
+      out.innerHTML = `<p class="hint">${t('近期暂时没有查到法定节假日安排（可能还没公布），过阵子再来看看。', 'No upcoming holidays in the available data.')}</p>`;
       clearLeaveTeaser();
       return;
     }
@@ -365,37 +393,37 @@ function bindLeavePlan() {
     // 行内"标出"按钮复用卡片同款 class，走同一个事件委托。
     const overview = list.length > 1 ? `
       <details class="leave-plan__overview">
-        <summary>全年一览（${list.length} 个假期，点「标出」直接画到日历）</summary>
+        <summary>${t(`全年一览（${list.length} 个假期，点「标出」直接画到日历）`, `Overview (${list.length} holiday breaks)`)}</summary>
         <table>
-          <thead><tr><th>假期</th><th>不请假</th><th>方案</th><th></th></tr></thead>
+          <thead><tr><th>${t('假期', 'Holiday')}</th><th>${t('不请假', 'Without leave')}</th><th>${t('方案', 'Plan')}</th><th></th></tr></thead>
           <tbody>
             ${list.map((row, idx) => {
-              const names = (row.recommended ? row.recommended.names : row.naturalNames).join('+');
+              const names = (row.recommended ? row.recommended.names : row.naturalNames).map(holidayLabel).join(' + ');
               const plan = row.recommended
-                ? `请 ${row.recommended.cost} → 休 ${row.recommended.totalDays}`
+                ? t(`请 ${row.recommended.cost} → 休 ${row.recommended.totalDays}`, `Use ${row.recommended.cost} → get ${row.recommended.totalDays}`)
                 : '—';
               const btnAttrs = row.recommended
                 ? ''
-                : 'disabled title="附近没有能拼的缺口"';
+                : 'disabled';
               return `<tr>
                 <td>${names}</td>
-                <td>${row.naturalDays} 天</td>
+                <td>${t(`${row.naturalDays} 天`, daysLabel(row.naturalDays))}</td>
                 <td>${plan}</td>
-                <td><button type="button" class="leave-plan__mark-btn leave-plan__row-btn" data-idx="${idx}" ${btnAttrs}>标出</button></td>
+                <td><button type="button" class="leave-plan__mark-btn leave-plan__row-btn" data-idx="${idx}" ${btnAttrs}>${t('标出', 'Mark')}</button></td>
               </tr>`;
             }).join('')}
           </tbody>
         </table>
       </details>` : '';
     out.innerHTML = overview + list.map((row, idx) => {
-      const names = (row.recommended ? row.recommended.names : row.naturalNames).join(' + ');
-      const naturalLine = `<div class="leave-plan__natural">不请假连休 ${row.naturalDays}&nbsp;天（${shortDate(row.naturalStart)}~${shortDate(row.naturalEnd)}）</div>`;
+      const names = (row.recommended ? row.recommended.names : row.naturalNames).map(holidayLabel).join(' + ');
+      const naturalLine = `<div class="leave-plan__natural">${t(`不请假连休 ${row.naturalDays}&nbsp;天`, `${daysLabel(row.naturalDays)} off without leave`)} (${shortDate(row.naturalStart)}–${shortDate(row.naturalEnd)})</div>`;
       if (!row.recommended) {
         return `
           <div class="leave-plan">
             <div class="leave-plan__title">${names}</div>
             ${naturalLine}
-            <p class="hint">附近没有能再拼的工作日缺口，这已经是自然最长的连休了。</p>
+            <p class="hint">${t('附近没有能再拼的工作日缺口，这已经是自然最长的连休了。', 'No nearby workdays to bridge into a longer break.')}</p>
           </div>
         `;
       }
@@ -403,28 +431,29 @@ function bindLeavePlan() {
       const ratio = (r.totalDays / r.cost).toFixed(1);
       const ranges = groupDateRanges(r.leaveDates)
         .map((g) => `<span class="leave-plan__range">${formatLeaveRangeLabel(g)}</span>`)
-        .join('、');
+        .join(t('、', ', '));
       return `
         <div class="leave-plan">
           <div class="leave-plan__head">
             <div class="leave-plan__title">${names}</div>
-            <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">标出 →</button>
+            <button type="button" class="leave-plan__mark-btn" data-idx="${idx}">${t('标出 →', 'Mark →')}</button>
           </div>
           ${naturalLine}
           <div class="leave-plan__summary">
-            <span>请假 <strong>${r.cost}</strong>&nbsp;→ 连休 <strong>${r.totalDays}</strong>&nbsp;天（${shortDate(r.start)}~${shortDate(r.end)}）</span>
-            <span class="leave-plan__ratio" title="平均每请 1 天年假换 ${ratio} 天连休">1 换 ${ratio}</span>
+            <span>${t(`请假 <strong>${r.cost}</strong>&nbsp;→ 连休 <strong>${r.totalDays}</strong>&nbsp;天`, `Use <strong>${r.cost}</strong> → get <strong>${daysLabel(r.totalDays)}</strong> off`)} (${shortDate(r.start)}–${shortDate(r.end)})</span>
+            <span class="leave-plan__ratio" title="${t(`平均每请 1 天年假换 ${ratio} 天连休`, `${ratio} days off per leave day`)}">${t(`1 换 ${ratio}`, `1 : ${ratio}`)}</span>
           </div>
-          <div class="leave-plan__dates">需请假：${ranges}</div>
+          <div class="leave-plan__dates">${t('需请假：', 'Take leave: ')}${ranges}</div>
         </div>
       `;
-    }).join('') + '<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">清除标注</button>';
+    }).join('') + `<button type="button" class="leave-plan__clear-btn" id="leavePlanClearBtn">${t('清除标注', 'Clear marks')}</button>`;
 
     // 用最靠前的一条有加钱升级的机会做入口提示，放在日历上面，不用滚到底才发现有这功能。
     const best = list.find((row) => row.recommended);
     if (best) {
       setLeaveTeaser(
-        `🎉 ${best.recommended.names.join('+')}请 ${best.recommended.cost} 天连休 ${best.recommended.totalDays} 天 →`,
+        t(`🎉 ${best.recommended.names.join('+')}请 ${best.recommended.cost} 天连休 ${best.recommended.totalDays} 天 →`,
+          `🎉 ${best.recommended.names.map(holidayLabel).join(' + ')}: use ${best.recommended.cost}, get ${daysLabel(best.recommended.totalDays)} off →`),
         flashLeavePlanCard
       );
     } else {
@@ -432,17 +461,26 @@ function bindLeavePlan() {
     }
   }
 
-  async function load() {
-    out.innerHTML = '<p class="hint">加载中…</p>';
-    const results = await ensureYears(yearsInRange(state.today));
-    if (results.length > 0) reportLoadResults(results);
-    renderList(suggestHolidayOpportunities(getDataStore(), { fromDate: state.today }));
+  async function refreshOverview() {
+    const regionVersion = state.regionVersion;
+    const today = state.today;
+    currentList = [];
+    out.innerHTML = `<p class="hint">${t('加载中…', 'Loading…')}</p>`;
+    await ensureYears(yearsInRange(today));
+    if (regionVersion !== state.regionVersion || today !== state.today) return;
+    const store = currentStore();
+    const horizonDays = coveredDays(today, DEFAULT_HORIZON_DAYS, store);
+    const covered = new Map(horizonDays ? yearsInRange(today, horizonDays).map((year) => [year, store.get(year)]) : []);
+    renderNextHoliday(covered);
+    renderWorkdayRemaining(store);
+    renderList(horizonDays ? suggestHolidayOpportunities(store, { fromDate: today, horizonDays }) : []);
+    $('leaveCoverage').hidden = horizonDays === DEFAULT_HORIZON_DAYS;
   }
 
   out.addEventListener('click', async (e) => {
     if (e.target.closest('#leavePlanClearBtn')) {
       state.leaveDates = new Set();
-      renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
+      renderCalendar();
       return;
     }
     const btn = e.target.closest('.leave-plan__mark-btn');
@@ -452,11 +490,12 @@ function bindLeavePlan() {
     state.leaveDates = new Set(row.recommended.leaveDates);
     deselectDay();
     const jumpTo = parseDate(row.recommended.leaveDates[0] || row.recommended.start);
-    await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1);
-    $('calGrid').scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+    if (await gotoMonth(jumpTo.getFullYear(), jumpTo.getMonth() + 1)) {
+      $('calGrid').scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+    }
   });
 
-  load();
+  return refreshOverview;
 }
 
 // Navigating to a different month invalidates whatever day was selected —
@@ -490,50 +529,86 @@ function bindNav() {
   });
 }
 
-// --- 活动筛选：点一个标签，高亮当月"宜"这件事的日子；再点一次取消 ---
-function bindActivityFilters() {
-  const container = $('activityFilters');
-  container.innerHTML = ACTIVITIES.map((a) =>
-    `<button type="button" class="activity-chip" data-term="${a.term}">${a.label}</button>`
-  ).join('');
+function syncActivity() {
+  const activity = ACTIVITIES.find(({ term }) => term === state.activityTerm);
+  state.activityLabel = activity ? activityName(activity) : '';
+  $('activityFilters').querySelectorAll('.activity-chip').forEach((el) => {
+    const active = el.dataset.term === state.activityTerm;
+    el.classList.toggle('activity-chip--active', active);
+    el.setAttribute('aria-pressed', String(active));
+  });
+  $('activityFiltersStatus').hidden = !activity;
+  if (activity) $('activityFiltersStatusText').textContent = t(
+    `当前显示：本月宜「${state.activityLabel}」的日子（绿框标出）`,
+    `Green outlines mark dates suitable for “${state.activityLabel}”.`,
+  );
+}
 
-  container.addEventListener('click', (e) => {
+function updateAlmanac(expanded) {
+  const atTop = state.region === DEFAULT_REGION;
+  const panel = $('activityPanel');
+  const shelf = $('almanacShelf');
+  const toggle = $('almanacToggle');
+  const open = atTop || expanded;
+  if (atTop) $('calGrid').before(panel);
+  else shelf.append(panel);
+  shelf.hidden = atTop;
+  panel.hidden = !open;
+  $('almanacDetail').hidden = !open;
+  $('suitsLegend').hidden = !open;
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.textContent = open ? t('收起农历宜忌', 'Hide lunar almanac') : t('显示农历宜忌', 'Show lunar almanac');
+  $('activityPrompt').textContent = atTop
+    ? t('按活动看这个月宜办的日子：', 'Find suitable dates this month:')
+    : t('按传统黄历选日（与当地假期无关）：', 'Choose dates with the traditional Chinese almanac (independent of local holidays):');
+  if (!open) {
+    state.activityTerm = '';
+    syncActivity();
+    $('dayPopover').hidden = true;
+  }
+}
+
+function renderActivityOptions() {
+  $('activityFilters').innerHTML = ACTIVITIES.map((a) =>
+    `<button type="button" class="activity-chip" data-term="${a.term}">${activityName(a)}</button>`
+  ).join('');
+  syncActivity();
+}
+
+// 点一个活动高亮宜办日期，再点一次取消。
+function bindActivityFilters() {
+  $('almanacToggle').addEventListener('click', () => {
+    updateAlmanac($('activityPanel').hidden);
+    renderCalendar();
+  });
+  $('activityFilters').addEventListener('click', (e) => {
     const btn = e.target.closest('.activity-chip');
     if (!btn) return;
     const term = btn.dataset.term;
     state.activityTerm = state.activityTerm === term ? '' : term;
-    state.activityLabel = state.activityTerm ? btn.textContent : '';
-    container.querySelectorAll('.activity-chip').forEach((el) =>
-      el.classList.toggle('activity-chip--active', el.dataset.term === state.activityTerm));
-    renderMonth(state.year, state.month, $('calGrid'), getDataStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
-
-    const status = $('activityFiltersStatus');
-    if (state.activityTerm) {
-      $('activityFiltersStatusText').textContent = `当前显示：本月宜「${state.activityLabel}」的日子（绿框标出）`;
-      status.hidden = false;
-    } else {
-      status.hidden = true;
-    }
+    syncActivity();
+    renderCalendar();
   });
 
   $('activityFindBtn').addEventListener('click', async () => {
     if (!state.activityTerm) return;
     const btn = $('activityFindBtn');
     btn.disabled = true;
-    btn.textContent = '查找中…';
-    const found = findNextSuitableDate(state.today, state.activityTerm, getDataStore());
+    btn.textContent = t('查找中…', 'Finding…');
+    const found = findNextSuitableDate(state.today, state.activityTerm, currentStore());
     btn.disabled = false;
-    btn.textContent = '找最近一天 →';
+    btn.textContent = t('找最近一天 →', 'Find next date →');
     if (!found) {
-      $('activityFiltersStatusText').textContent = `两年内没找到宜「${state.activityLabel}」的日子，这不太可能，建议检查一下`;
+      $('activityFiltersStatusText').textContent = t(`两年内没找到宜「${state.activityLabel}」的日子`, `No suitable date for “${state.activityLabel}” in the next two years.`);
       return;
     }
     const d = parseDate(found);
-    await gotoMonth(d.getFullYear(), d.getMonth() + 1);
+    const term = state.activityTerm;
+    if (!await gotoMonth(d.getFullYear(), d.getMonth() + 1) || term !== state.activityTerm) return;
     const cell = $('calGrid').querySelector(`[data-date="${found}"]`);
     if (cell) selectDay(cell);
     $('activityFiltersStatusText').textContent =
-      `距今最近的宜「${state.activityLabel}」是 ${found}（已跳转，绿框标出）`;
+      t(`距今最近的宜「${state.activityLabel}」是 ${found}（已跳转，绿框标出）`, `Next suitable date for “${state.activityLabel}”: ${found}.`);
   });
 }
 
@@ -622,7 +697,7 @@ function bindDayPopover() {
   function hide() { popover.hidden = true; }
 
   function dayFactsHtml(dateStr) {
-    const facts = describeDayFacts(describeDay(dateStr, getDataStore()));
+    const facts = describeDayFacts(describeDay(dateStr, currentStore()));
     return facts.map((f) => `<p class="day-popover__fact"><strong>${f.term}</strong>：${f.blurb}</p>`).join('');
   }
 
@@ -686,7 +761,9 @@ function bindTheme() {
     // form controls still track the OS preference.
     colorSchemeMeta.content = mode ? `only ${mode}` : 'light dark';
   };
-  apply(localStorage.getItem(KEY));
+  let savedTheme;
+  try { savedTheme = localStorage.getItem(KEY); } catch { /* follow the system */ }
+  apply(savedTheme);
   btn.addEventListener('click', () => {
     const current = document.documentElement.dataset.theme ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -705,50 +782,184 @@ async function applyHashView(fallbackYear, fallbackMonth) {
   const month = fromHash ? fromHash.month : fallbackMonth;
   state.selected = fromHash?.selected || '';
 
-  await gotoMonth(year, month);
-  if (state.selected) {
-    const cell = $('calGrid').querySelector(`[data-date="${state.selected}"]`);
-    if (cell) {
-      cell.classList.add('day--selected');
-      showDayDetail(state.selected);
-      ensureDetailVisible(); // 深链进入时让目标日的详情可见，而不是停在视口外
-    }
-  }
+  if (!await gotoMonth(year, month)) return;
+  if (state.selected) ensureDetailVisible(); // 深链进入时让目标日的详情可见
 }
 
 function bindHashChange() {
   window.addEventListener('hashchange', () => applyHashView(state.year, state.month));
 }
 
+function renderRegionClock() {
+  const clock = $('regionClock');
+  let value;
+  try {
+    value = regionClock(state.region);
+  } catch {
+    // Older WebViews may lack offset formatting. Keep the calendar usable.
+    clock.hidden = true;
+    return;
+  }
+  $('regionClockCity').textContent = t(...CLOCK_ZONES[state.region].city);
+  const time = $('regionClockTime');
+  time.textContent = value.time;
+  time.dateTime = value.time;
+  $('regionClockOffset').textContent = value.offset;
+  clock.hidden = false;
+}
+
+function bindRegionClock() {
+  function tick() {
+    if (!document.hidden) renderRegionClock();
+    setTimeout(tick, 60000 - Date.now() % 60000);
+  }
+  setTimeout(tick, 60000 - Date.now() % 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) renderRegionClock();
+  });
+}
+
+function updateRegionChrome() {
+  const { source, label, scope } = REGIONS[state.region];
+  for (const option of $('holidayRegion').querySelectorAll('[data-region]')) {
+    const selected = option.dataset.region === state.region;
+    option.setAttribute('aria-pressed', String(selected));
+    if (selected) {
+      $('regionLabel').textContent = option.textContent;
+      $('regionTrigger').setAttribute('aria-label', t(`假期地区：${option.textContent}`, `Holiday region: ${option.textContent}`));
+    }
+  }
+  $('holidaySource').href = source;
+  const sourceEn = { CN: label, US: 'U.S. Office of Personnel Management (OPM)', SG: 'Singapore Ministry of Manpower (MOM)' };
+  $('holidaySource').textContent = t(label, sourceEn[state.region]);
+  const scopeEn = {
+    CN: 'State Council holiday schedule, including make-up workdays.',
+    US: 'Federal holidays observed on a Monday–Friday schedule. Excludes state and employer-specific holidays.',
+    SG: 'Monday–Friday schedule with Sunday as the rest day. Saturday holidays do not automatically move to Monday.',
+  };
+  $('holidayScope').textContent = t(scope, scopeEn[state.region]);
+  $('makeupLegend').hidden = state.region !== DEFAULT_REGION;
+  renderRegionClock();
+}
+
+function bindRegion(refreshOverview) {
+  const picker = $('holidayRegion');
+  const trigger = $('regionTrigger');
+  const closeAndFocus = () => {
+    picker.open = false;
+    trigger.focus({ preventScroll: true });
+  };
+  document.addEventListener('click', (event) => {
+    if (picker.open && !picker.contains(event.target)) picker.open = false;
+  });
+  picker.addEventListener('focusout', (event) => {
+    if (event.relatedTarget && !picker.contains(event.relatedTarget)) picker.open = false;
+  });
+  picker.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !picker.open) return;
+    event.preventDefault();
+    closeAndFocus();
+  });
+  picker.addEventListener('click', async (event) => {
+    const option = event.target.closest('button[data-region]');
+    if (!option) return;
+    const region = option.dataset.region;
+    closeAndFocus();
+    if (!Object.hasOwn(REGIONS, region) || region === state.region) return;
+    state.region = region;
+    state.regionVersion++;
+    try { localStorage.setItem(REGION_KEY, region); } catch { /* optional preference */ }
+    updateRegionChrome();
+    updateAlmanac(false);
+    state.leaveDates = new Set();
+    $('dayDetail').hidden = true;
+    $('dayPopover').hidden = true;
+    $('calGrid').querySelectorAll('.day').forEach((cell) => cell.remove());
+    clearLeaveTeaser();
+    hideBanner();
+    const countdown = $('nextHoliday');
+    countdown.textContent = t('加载中…', 'Loading…');
+    countdown.classList.remove('has-data');
+    $('workdayRemaining').hidden = true;
+    $('leaveCoverage').hidden = true;
+    refreshFormResults();
+    await Promise.all([gotoMonth(state.year, state.month), refreshOverview()]);
+  });
+}
+
+function refreshFormResults() {
+  for (const [formId, outputId] of [['countForm', 'countResult'], ['addForm', 'addResult']]) {
+    const output = $(outputId);
+    output.textContent = '';
+    output.className = 'result';
+    if (output.dataset.calculated === 'true') $(formId).requestSubmit();
+  }
+}
+
+function renderLanguageChrome() {
+  const expanded = !$('activityPanel').hidden;
+  translateStatic(document);
+  const button = $('languageToggle');
+  button.textContent = t('English', '中文');
+  button.lang = t('en', 'zh-CN');
+  $('almanacTranslationNote').hidden = !english();
+  updateRegionChrome();
+  renderActivityOptions();
+  updateAlmanac(expanded);
+}
+
+function bindLanguage(refreshOverview) {
+  $('languageToggle').addEventListener('click', async () => {
+    setLanguage(t('en', 'zh-CN'));
+    try { localStorage.setItem(LANGUAGE_KEY, getLanguage()); } catch { /* optional preference */ }
+    renderLanguageChrome();
+    $('dayPopover').hidden = true;
+    clearLeaveTeaser();
+    hideBanner();
+    refreshFormResults();
+    await Promise.all([gotoMonth(state.year, state.month), refreshOverview()]);
+  });
+}
+
 async function init() {
-  state.today = todayStr();
-  const t = parseDate(state.today);
+  try {
+    setLanguage(localStorage.getItem(LANGUAGE_KEY));
+    const saved = localStorage.getItem(REGION_KEY);
+    if (Object.hasOwn(REGIONS, saved)) state.region = saved;
+  } catch { /* use the default region and language */ }
+  const today = todayStr();
+  state.today = today;
+  const date = parseDate(today);
+  // Make the initial non-CN view collapsed on every load.
+  updateAlmanac(false);
+  renderLanguageChrome();
 
   // Prefill forms with sensible defaults.
-  $('countForm').start.value = state.today;
-  $('countForm').end.value = formatDate(new Date(t.getFullYear(), t.getMonth() + 1, 0));
-  $('addForm').start.value = state.today;
+  $('countForm').start.value = today;
+  $('countForm').end.value = formatDate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+  $('addForm').start.value = today;
 
   bindTheme();
+  bindRegionClock();
   bindNav();
   bindActivityFilters();
   bindCalendarSelect();
   bindDayPopover();
   bindCount();
   bindAdd();
-  bindLeavePlan();
+  const refreshOverview = bindLeavePlan();
+  bindRegion(refreshOverview);
+  bindLanguage(refreshOverview);
   bindHashChange();
 
-  await applyHashView(t.getFullYear(), t.getMonth() + 1);
+  await Promise.all([applyHashView(date.getFullYear(), date.getMonth() + 1), refreshOverview()]);
   if (state.selected) {
     $('countForm').start.value = state.selected;
     $('addForm').start.value = state.selected;
   }
-  renderNextHoliday();
-  renderWorkdayRemaining();
 }
 
 init().catch((err) => {
   console.error(err);
-  showBanner('启动失败：' + err.message);
+  showBanner(t('启动失败：', 'Could not start: ') + err.message);
 });
