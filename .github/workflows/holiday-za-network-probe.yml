@@ -1,0 +1,29 @@
+name: Verify South Africa official source connectivity
+
+on:
+  push:
+    branches: [verify/holiday-actions-6e30164]
+    paths: [.github/workflows/holiday-za-network-probe.yml]
+
+permissions: {}
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 5
+    steps:
+      - name: Probe the national government holiday schedule
+        shell: bash
+        run: |
+          endpoint='https://www.gov.za/about-sa/public-holidays'
+          status=0
+          timing=$(curl --ipv4 --silent --show-error --max-time 22 --output /dev/null \
+            --write-out 'HTTP %{http_code}, DNS %{time_namelookup}s, TCP %{time_connect}s, TLS %{time_appconnect}s, total %{time_total}s' \
+            "$endpoint") || status=$?
+          printf '::warning title=South Africa upstream connectivity::curl status %s; %s\n' "$status" "$timing"
+          [[ "$timing" == HTTP\ 200,* ]] && exit "$status"
+          exit 1
