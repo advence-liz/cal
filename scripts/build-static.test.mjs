@@ -9,10 +9,22 @@ test('static output preserves the existing PWA without publishing backend code o
   const dest = await mkdtemp(join(tmpdir(), 'moyu-static-'));
   try {
     await buildStatic(dest);
-    for (const path of ['index.html', 'app.js', 'styles.css', 'manifest.json', 'service-worker.js', 'vendor/lunar.js']) {
+    for (const path of ['index.html', 'guide.html', 'guide.js', 'app.js', 'styles.css', 'manifest.json', 'service-worker.js', 'vendor/lunar.js']) {
       assert.ok((await stat(join(dest, path))).isFile(), path);
     }
+    const home = await readFile(join(dest, 'index.html'), 'utf8');
+    assert.match(home, /href="guide\.html"[^>]*data-i18n="guideLink"/);
+    const guide = await readFile(join(dest, 'guide.html'), 'utf8');
+    assert.match(guide, /href="\.\/"/);
+    assert.match(guide, /id="site"/);
+    assert.match(guide, /id="mcp"/);
+    const docs = await readFile(new URL('../README.md', import.meta.url), 'utf8');
+    for (const role of ['首选', '备用']) {
+      const url = docs.split('\n').find(line => line.startsWith(`| ${role}`) || line.startsWith(`| **${role}`))?.match(/`(https:\/\/[^`]+)`/)?.[1];
+      assert.ok(url && guide.includes(url), `Guide must include the ${role} MCP endpoint from the README`);
+    }
     const shell = await readFile(join(dest, 'service-worker.js'), 'utf8');
+    assert.ok(shell.includes("'./guide.html'") && shell.includes("'./guide.js'"), 'Guide must be available offline');
     for (const [, path] of shell.matchAll(/'\.\/([^']+)'/g)) assert.ok((await stat(join(dest, path))).isFile(), path);
     for (const file of ['holidays-2027.json', 'holidays-au.json', 'holidays-sa.json']) {
       assert.ok((await stat(join(dest, 'data', file))).isFile(), file);

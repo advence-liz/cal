@@ -6,10 +6,12 @@
 // is visible on the very next load, and only fall back to the cached shell
 // when offline. (A stale-while-revalidate strategy was tried first but meant
 // every update needed two page loads to show up — network-first avoids that.)
-const CACHE_NAME = 'cal-shell-v25';
+const CACHE_NAME = 'cal-shell-v26';
 const SHELL_FILES = [
   './',
   './index.html',
+  './guide.html',
+  './guide.js',
   './styles.css',
   './app.js',
   './i18n.js',

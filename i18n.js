@@ -40,6 +40,7 @@ export const activityName = ({ term, label }) => english() ? activityEn[term] ||
 
 const staticText = {
   appTitle: ['摸鱼日历', 'Moyu Calendar'], regionTitle: ['假期地区', 'Holiday region'],
+  guideLink: ['使用指南', 'Guide'],
   regionCN: ['中国大陆', 'Mainland China'], regionUS: ['美国联邦', 'US Federal'], regionSG: ['新加坡', 'Singapore'],
   regionJP: ['日本', 'Japan'], regionGB: ['英格兰和威尔士', 'England & Wales'],
   regionFR: ['法国本土', 'Metropolitan France'], regionZA: ['南非', 'South Africa'],

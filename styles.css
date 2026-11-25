@@ -968,6 +968,42 @@ body {
 .foot a { color: var(--today); text-decoration: none; }
 .foot a:hover { text-decoration: underline; }
 
+/* Keep the guide in the calendar's existing light/dark palette. */
+.guide-link, .guide-home { color: var(--text); text-decoration: none; }
+.guide-link { display: inline-flex; align-items: center; white-space: nowrap; }
+.guide-home { display: inline-flex; align-items: center; gap: 0.55rem; font-weight: 600; }
+.guide-body { padding-bottom: 0; }
+.guide-top, .guide-page { width: min(100% - 2rem, 54rem); margin-inline: auto; }
+.guide-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-block: 1rem; }
+.guide-page { padding-bottom: 3rem; }
+.guide-hero { border-block: 1px solid var(--border); padding-block: clamp(1.75rem, 5vw, 3.75rem); }
+.guide-hero h1 { font-size: clamp(1.8rem, 5vw, 3rem); line-height: 1.12; margin: 0 0 0.75rem; }
+.guide-hero p, .guide-section > p { max-width: 70ch; }
+.guide-hero p { color: var(--muted); font-size: 1.07rem; }
+.guide-jumps { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1.25rem; }
+.guide-page a { color: var(--text); text-underline-offset: 0.25em; text-decoration-color: var(--today); }
+.guide-section { scroll-margin-top: 1rem; padding-block: clamp(1.35rem, 4vw, 2.5rem); border-bottom: 1px solid var(--border); }
+.guide-section h2 { font-size: clamp(1.25rem, 4vw, 1.7rem); margin: 0 0 0.75rem; line-height: 1.32; }
+.guide-points, .guide-tools { margin-block: 1rem; }
+.guide-points > div, .guide-tools > div { display: grid; grid-template-columns: minmax(10rem, 13rem) 1fr; gap: 0.75rem; padding-block: 0.75rem; border-bottom: 1px solid var(--border); }
+.guide-points dt, .guide-tools dt { font-weight: 600; }
+.guide-points dd, .guide-tools dd { margin: 0; color: var(--muted); }
+.guide-section .guide-note { max-width: none; margin: 1rem 0; padding: 0.75rem 0.9rem; background: var(--alt-bg); border-inline-start: 3px solid var(--today); }
+.guide-endpoint { margin-block: 1rem; padding: 0.9rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.guide-endpoint--primary { border-inline-start: 3px solid var(--today); }
+.guide-endpoint > code { display: block; overflow-wrap: anywhere; margin-block: 0.45rem; }
+.guide-endpoint p { margin: 0.5rem 0 0; color: var(--muted); }
+.guide-copy-status { margin-inline-start: 0.25rem; font-size: 0.85rem; color: var(--muted); }
+.guide-details summary { cursor: pointer; font-weight: 600; padding-block: 0.55rem; }
+.guide-details pre { margin: 0; padding: 0.8rem; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--alt-bg); border-radius: 6px; }
+.guide-details p { margin: 0.75rem 0 0.35rem; }
+.guide-body :focus-visible, .guide-link:focus-visible { outline: 2px solid var(--today); outline-offset: 3px; }
+
+@media (max-width: 560px) {
+  .guide-points > div, .guide-tools > div { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
+  .topbar-right { flex-wrap: wrap; }
+}
+
 .mobile-nav-bar { display: none; }
 
 @media (max-width: 820px) {

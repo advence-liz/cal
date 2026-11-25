@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const shell = [
-  'index.html', 'styles.css', 'app.js', 'i18n.js', 'region-clock.js', 'calendar.js',
+  'index.html', 'guide.html', 'guide.js', 'styles.css', 'app.js', 'i18n.js', 'region-clock.js', 'calendar.js',
   'workday.js', 'holidays.js', 'bridge-plan.js', 'lunar-adapter.js', 'almanac-info.js',
   'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png', 'service-worker.js', 'sw-register.js',
   'vendor/lunar.js', 'vendor/LICENSE-lunar', 'data/yiji-overrides.js',
