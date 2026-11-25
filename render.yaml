@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: moyu-calendar
+    runtime: static
+    buildCommand: node scripts/build-static.mjs
+    staticPublishPath: ./dist
+    autoDeployTrigger: checksPass
+
+  - type: web
+    name: moyu-calendar-mcp
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --omit=dev --prefix mcp
+    startCommand: npm --prefix mcp start
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
+      - key: TZ
+        value: UTC

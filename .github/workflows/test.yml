@@ -13,6 +13,17 @@ jobs:
       - name: Test official-source parsers
         run: python3 -B -m unittest discover -s scripts -p 'test_vendor_holidays_intl.py'
 
+  render-build-and-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test scripts/build-static.test.mjs
+      - run: npm ci --prefix mcp
+      - run: npm test --prefix mcp
+
   browser-tests:
     runs-on: ubuntu-latest
     steps:
@@ -32,7 +43,7 @@ jobs:
 
       - name: Wait for server
         run: |
-          for i in $(seq 1 20); do
+          for _ in $(seq 1 20); do
             curl -sf http://localhost:8080/tests.html > /dev/null && exit 0
             sleep 0.5
           done
