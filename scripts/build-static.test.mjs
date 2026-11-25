@@ -19,10 +19,11 @@ test('static output preserves the existing PWA without publishing backend code o
     assert.match(guide, /id="site"/);
     assert.match(guide, /id="mcp"/);
     const docs = await readFile(new URL('../README.md', import.meta.url), 'utf8');
-    for (const role of ['首选', '备用']) {
-      const url = docs.split('\n').find(line => line.startsWith(`| ${role}`) || line.startsWith(`| **${role}`))?.match(/`(https:\/\/[^`]+)`/)?.[1];
-      assert.ok(url && guide.includes(url), `Guide must include the ${role} MCP endpoint from the README`);
-    }
+    const mcpUrls = text => [...new Set(text.match(/https:\/\/[^/\s`"<]+\/mcp\b/g) ?? [])];
+    const renderMcp = 'https://moyu-calendar-mcp.onrender.com/mcp';
+    assert.deepEqual(mcpUrls(docs), [renderMcp], 'README must advertise only the Render MCP endpoint');
+    assert.deepEqual(mcpUrls(guide), [renderMcp], 'Guide must advertise only the Render MCP endpoint');
+    assert.ok(guide.includes(`<code id="primaryMcp">${renderMcp}</code>`), 'The copy button must target the Render endpoint');
     const shell = await readFile(join(dest, 'service-worker.js'), 'utf8');
     assert.ok(shell.includes("'./guide.html'") && shell.includes("'./guide.js'"), 'Guide must be available offline');
     for (const [, path] of shell.matchAll(/'\.\/([^']+)'/g)) assert.ok((await stat(join(dest, path))).isFile(), path);

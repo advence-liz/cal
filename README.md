@@ -13,22 +13,17 @@
 
 ## 用 MCP 查假期和算工作日
 
-**默认用 Cloudflare；连接不上时，可手动把客户端里的 URL 换成 Render。** 两个入口都使用 **Streamable HTTP**，公开只读，不需要 API Key 或 OAuth。MCP 服务本身不调用模型；AI 客户端仍按自己的规则计费。
+**MCP 使用 Render 上的公开只读服务。** 在支持 **Streamable HTTP** 的客户端中添加 `https://moyu-calendar-mcp.onrender.com/mcp`，无需 API Key 或 OAuth。MCP 服务本身不调用模型；AI 客户端仍按自己的规则计费。
 
-| 入口 | MCP URL |
-| --- | --- |
-| **首选 · Cloudflare Workers** | `https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp` |
-| 备用 · Render | `https://moyu-calendar-mcp.onrender.com/mcp` |
-
-Render 免费实例闲置后，首次 MCP 调用可能要等约一分钟；两个独立的日历网站不依赖 MCP，不受影响。下方接入示例统一使用 Cloudflare 地址。
+Render 免费实例闲置后，首次 MCP 调用可能要等约一分钟。若客户端启动超时，可等待服务唤醒后重连；已接入过摸鱼日历的用户只需替换现有配置里的 URL。两个日历网站不依赖 MCP，不受影响。
 
 ### Codex、Claude Code 和 Gemini CLI 可用一条命令接入
 
 | 客户端 | 命令 |
 | --- | --- |
-| [Codex CLI](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) | `codex mcp add moyu-calendar --url https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp` |
-| [Claude Code](https://code.claude.com/docs/en/mcp) | `claude mcp add --transport http moyu-calendar https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp` |
-| [Gemini CLI](https://geminicli.com/docs/tools/mcp-server/) | `gemini mcp add --transport http moyu-calendar https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp` |
+| [Codex CLI](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) | `codex mcp add moyu-calendar --url https://moyu-calendar-mcp.onrender.com/mcp` |
+| [Claude Code](https://code.claude.com/docs/en/mcp) | `claude mcp add --transport http moyu-calendar https://moyu-calendar-mcp.onrender.com/mcp` |
+| [Gemini CLI](https://geminicli.com/docs/tools/mcp-server/) | `gemini mcp add --transport http moyu-calendar https://moyu-calendar-mcp.onrender.com/mcp` |
 
 Codex CLI 和同一环境里的 Codex IDE 扩展共享配置。接入后，可在新会话里试一句：**「用摸鱼日历查一下，沙特金融机构从 2026 年 9 月 24 日到 27 日有几个工作日？」** 结果应为 **2 个（周四和周日）**。
 
@@ -36,8 +31,8 @@ Codex CLI 和同一环境里的 Codex IDE 扩展共享配置。接入后，可�
 
 | 客户端 | 在哪里添加 |
 | --- | --- |
-| [Claude 网页版 / Desktop](https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp) | Customize → Connectors → Add custom connector。填 Cloudflare 的 MCP URL，认证选 **No sign in**。组织账号可能需要管理员先添加。 |
-| [ChatGPT](https://developers.openai.com/api/docs/guides/developer-mode) | 打开 [Plugins](https://chatgpt.com/plugins) → `+` → Add custom MCP server。填 Cloudflare 的 MCP URL，认证选 **No authentication**，创建后安装。仅限开放自定义 MCP 的账号或工作区。 |
+| [Claude 网页版 / Desktop](https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp) | Customize → Connectors → Add custom connector。填上面的 MCP URL，认证选 **No sign in**。组织账号可能需要管理员先添加。 |
+| [ChatGPT](https://developers.openai.com/api/docs/guides/developer-mode) | 打开 [Plugins](https://chatgpt.com/plugins) → `+` → Add custom MCP server。填上面的 MCP URL，认证选 **No authentication**，创建后安装。仅限开放自定义 MCP 的账号或工作区。 |
 | [VS Code / GitHub Copilot](https://code.visualstudio.com/docs/copilot/customization/mcp-servers) | 在 Copilot 会话运行 **Chat: Open Customizations** → **MCP Servers** → **Add Server**，选择 HTTP 并填 URL。 |
 | [Cursor](https://cursor.com/docs/context/mcp) | 在项目的 `.cursor/mcp.json` 中，向 `mcpServers` 添加命名条目，远程地址字段为 `url`。 |
 | [OpenCode](https://opencode.ai/docs/mcp-servers/#remote) | 在项目的 `opencode.json` 中，向 `mcp.servers` 添加命名条目，字段为 `type: "remote"` 和 `url`。 |
@@ -51,7 +46,7 @@ Cursor：`.cursor/mcp.json`
 {
   "mcpServers": {
     "moyu-calendar": {
-      "url": "https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp"
+      "url": "https://moyu-calendar-mcp.onrender.com/mcp"
     }
   }
 }
@@ -65,7 +60,7 @@ OpenCode：`opencode.json`
     "servers": {
       "moyu-calendar": {
         "type": "remote",
-        "url": "https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp"
+        "url": "https://moyu-calendar-mcp.onrender.com/mcp"
       }
     }
   }

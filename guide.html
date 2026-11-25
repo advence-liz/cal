@@ -39,17 +39,18 @@
       <h2 data-en="Connect MCP to look up holidays, count workdays, and convert time zones">接入 MCP，让 AI 查假期、算工作日和换时区</h2>
       <p data-en="MCP is a way for AI clients to call tools. This service is public and read-only. In a client that supports Streamable HTTP, add the URL below as a remote MCP server; no API key or sign-in is required.">MCP 是 AI 客户端调用工具的方式。在支持 Streamable HTTP 的客户端中添加下面的远程地址即可。服务公开、只读，不需要 API Key 或登录。</p>
       <div class="guide-endpoint guide-endpoint--primary">
-        <strong data-en="Recommended · Cloudflare Workers">首选 · Cloudflare Workers</strong>
-        <code id="primaryMcp">https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp</code>
+        <strong data-en="MCP endpoint · Render">MCP 地址 · Render</strong>
+        <code id="primaryMcp">https://moyu-calendar-mcp.onrender.com/mcp</code>
         <button type="button" class="language-toggle" id="copyMcp" data-en="Copy URL" hidden>复制地址</button>
         <span class="guide-copy-status" id="copyMcpStatus" role="status"></span>
       </div>
+      <p class="guide-note" data-en="The first request after the free Render service has been idle may take about a minute. If your client times out, wait for the service to wake and try again. If you already connected Moyu Calendar, replace the URL in your existing configuration.">Render 免费服务闲置后，首次调用可能要等约一分钟。若客户端超时，可等服务唤醒后重试。已接入过摸鱼日历的用户，只需替换原配置中的地址。</p>
       <details class="guide-details">
         <summary data-en="Connect from Codex or Claude Code">在 Codex 或 Claude Code 中接入</summary>
         <p>Codex</p>
-        <pre><code>codex mcp add moyu-calendar --url https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp</code></pre>
+        <pre><code>codex mcp add moyu-calendar --url https://moyu-calendar-mcp.onrender.com/mcp</code></pre>
         <p>Claude Code</p>
-        <pre><code>claude mcp add --transport http moyu-calendar https://calendar-mcp-benchmark.calendar-workday-lab.workers.dev/mcp</code></pre>
+        <pre><code>claude mcp add --transport http moyu-calendar https://moyu-calendar-mcp.onrender.com/mcp</code></pre>
         <p><a href="https://github.com/advence-liz/cal#用-mcp-查假期和算工作日" data-en="See Gemini CLI, Cursor, VS Code and other clients">查看 Gemini CLI、Cursor、VS Code 等其他客户端的接入方式</a></p>
       </details>
       <dl class="guide-tools">
@@ -63,11 +64,6 @@
         <div><dt><code>find_meeting_windows</code></dt><dd data-en="Find overlapping work hours on workdays for two to four people over up to seven days. It does not check personal availability or book meetings.">在最多七天内找两到四人在工作日的共同办公时间。不查询个人忙闲，也不会预约会议。</dd></div>
       </dl>
       <p class="guide-note" data-en="Try asking: “How many workdays are there for Saudi financial institutions from September 24 to 27, 2026?” The result is 2. The holiday-based tools return an error for missing years rather than an estimate. The lunar almanac is only on the website.">接入后可以试问：「沙特金融机构从 2026 年 9 月 24 日到 27 日有几个工作日？」答案是 2 个。依赖假期数据的工具遇到未收录的年份会报错，不估算；农历宜忌请在网页上使用。</p>
-      <div class="guide-endpoint">
-        <strong data-en="Fallback · Render">备用 · Render</strong>
-        <code>https://moyu-calendar-mcp.onrender.com/mcp</code>
-        <p data-en="If Cloudflare is unreachable, replace the URL in your client manually. The first request after Render has been idle may take about a minute.">如果 Cloudflare 连不上，可手动替换客户端里的地址。Render 闲置后首次调用可能需要等约一分钟。</p>
-      </div>
     </section>
   </main>
   <script type="module" src="guide.js"></script>
