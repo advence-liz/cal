@@ -8,7 +8,10 @@ function fake(tag, versions = [{ version_id: version, percentage: 100 }]) {
   const calls = [];
   const run = (...args) => {
     calls.push(args);
-    if (args[0] === 'deployments') return JSON.stringify([{ versions }]);
+    if (args[0] === 'deployments') {
+      assert.deepEqual(args, ['deployments', 'status', '--json']);
+      return JSON.stringify({ versions });
+    }
     if (args[0] === 'versions') return JSON.stringify({ annotations: { 'workers/tag': tag } });
     assert.equal(args[0], 'deploy');
     return 'uploaded';
@@ -19,7 +22,7 @@ function fake(tag, versions = [{ version_id: version, percentage: 100 }]) {
 test('an already deployed input revision does not create another Worker version', () => {
   const { calls, run } = fake(`cal-${revision}`);
   assert.deepEqual(deployIfChanged(revision, run), { deployed: false });
-  assert.deepEqual(calls, [['deployments', 'list', '--json'], ['versions', 'view', version, '--json']]);
+  assert.deepEqual(calls, [['deployments', 'status', '--json'], ['versions', 'view', version, '--json']]);
 });
 
 test('a new input revision is deployed once, without framework changes', () => {

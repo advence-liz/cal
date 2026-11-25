@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export function deployIfChanged(revision, wrangler) {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error('Invalid deployment revision');
   const tag = `cal-${revision}`;
-  const [current] = JSON.parse(wrangler('deployments', 'list', '--json'));
+  const current = JSON.parse(wrangler('deployments', 'status', '--json'));
   const versions = current?.versions ?? [];
   if (versions.length !== 1 || versions[0].percentage !== 100 || !versions[0].version_id) {
     throw new Error('Expected one active Worker version at 100%; refusing to replace the deployment');
