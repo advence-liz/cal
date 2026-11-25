@@ -25,34 +25,37 @@ function getMeta(dateStr, store) {
   return yearMap ? yearMap.get(dateStr) : undefined;
 }
 
-export function isWorkday(dateStr, store) {
-  const meta = getMeta(dateStr, store);
-  if (meta) return meta.isOffDay === false;
-  const dow = parseDate(dateStr).getDay(); // 0=Sun, 6=Sat
-  return dow !== 0 && dow !== 6;
+export function isWeekend(dow, weekendDays = [0, 6]) {
+  return weekendDays.includes(dow); // 0=Sun, 6=Sat
 }
 
-export function countWorkdays(startStr, endStr, store) {
+export function isWorkday(dateStr, store, weekendDays) {
+  const meta = getMeta(dateStr, store);
+  if (meta) return meta.isOffDay === false;
+  return !isWeekend(parseDate(dateStr).getDay(), weekendDays);
+}
+
+export function countWorkdays(startStr, endStr, store, weekendDays) {
   if (startStr > endStr) {
     throw new Error('起始日期不能晚于结束日期');
   }
   let count = 0;
   let cursor = startStr;
   while (cursor <= endStr) {
-    if (isWorkday(cursor, store)) count++;
+    if (isWorkday(cursor, store, weekendDays)) count++;
     cursor = addDays(cursor, 1);
   }
   return count;
 }
 
-export function addWorkdays(startStr, n, store) {
+export function addWorkdays(startStr, n, store, weekendDays) {
   if (n === 0) return startStr;
   const step = n > 0 ? 1 : -1;
   let remaining = Math.abs(n);
   let cursor = startStr;
   while (remaining > 0) {
     cursor = addDays(cursor, step);
-    if (isWorkday(cursor, store)) remaining--;
+    if (isWorkday(cursor, store, weekendDays)) remaining--;
   }
   return cursor;
 }

@@ -10,6 +10,10 @@ export const REGIONS = {
   GB: { source: 'https://www.gov.uk/bank-holidays', label: 'GOV.UK', scope: '仅英格兰和威尔士的银行假日，含补休；不含苏格兰和北爱尔兰', file: 'data/holidays-gb.json' },
   FR: { source: 'https://calendrier.api.gouv.fr/jours-feries/metropole.json', label: '法国政府公共假日数据', scope: '法国本土通用假日，不含地方和海外增补；实际排班以雇主安排为准', file: 'data/holidays-fr.json' },
   ZA: { source: 'https://www.gov.za/about-sa/public-holidays', label: '南非政府公共假日', scope: '全国公共假日，周日遇假时次日周一也放假', file: 'data/holidays-za.json' },
+  IN: { source: 'https://www.aiims.edu/index.php/en/administrative-structure-nddtc/241-notices/vacations-holidays', label: '德里中央政府机关假期公告', scope: '仅德里／新德里中央政府行政机关的公告假日，不含可选假、各邦假或私企自定假期', file: 'data/holidays-in.json' },
+  BR: { source: 'https://www.planalto.gov.br/ccivil_03/leis/l0662.htm', label: '巴西联邦假日法', scope: '只含固定的全国法定假日，不含州、市假、选举日或联邦机关弹性休假', file: 'data/holidays-br.json' },
+  AU: { source: 'https://www.nsw.gov.au/about-nsw/public-holidays', label: '新南威尔士州政府', scope: '仅含全州公共假日及州政府公布的补休日，不含地方假或仅适用于银行的假日', file: 'data/holidays-au.json' },
+  SA: { source: 'https://www.sama.gov.sa/en-US/Supervision/Pages/holidayschedules.aspx', label: '沙特中央银行（SAMA）', scope: '仅按金融机构假期安排；周五、周六休息，周日至周四工作。不代表私企或公共部门排班，部分分行例外', file: 'data/holidays-sa.json', weekendDays: [5, 6] },
 };
 
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master';

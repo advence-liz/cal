@@ -1,6 +1,6 @@
 // Month grid renderer. Monday-first (中国习惯).
 
-import { formatDate, parseDate, addDays } from './workday.js';
+import { formatDate, parseDate, addDays, isWeekend } from './workday.js';
 import { t, english, holidayLabel, dateLabel } from './i18n.js';
 import { getDayInfo } from './lunar-adapter.js';
 import { JIEQI_INFO, FESTIVAL_INFO } from './almanac-info.js';
@@ -52,7 +52,7 @@ export function getMonthCells(year, month) {
 
 // Pure day lookup: holiday meta + weekday + lunar info for one date.
 // Shared by the grid cell (tooltip/tag) and the tap-to-view detail panel.
-export function describeDay(dateStr, dataStore, { showLunar = true, showChineseFestivals = true } = {}) {
+export function describeDay(dateStr, dataStore, { showLunar = true, showChineseFestivals = true, weekendDays } = {}) {
   const dateObj = parseDate(dateStr);
   const year = dateObj.getFullYear();
   const yearMap = dataStore.get(year);
@@ -72,7 +72,7 @@ export function describeDay(dateStr, dataStore, { showLunar = true, showChineseF
     }
   }
 
-  return { dateStr, dow, meta, lunarInfo };
+  return { dateStr, dow, weekend: isWeekend(dow, weekendDays), meta, lunarInfo };
 }
 
 const solarTerms = Object.fromEntries('小寒 大寒 立春 雨水 惊蛰 春分 清明 谷雨 立夏 小满 芒种 夏至 小暑 大暑 立秋 处暑 白露 秋分 寒露 霜降 立冬 小雪 大雪 冬至'.split(' ').map((term, i) => [term,
@@ -88,7 +88,7 @@ export function describeDayText(info) {
     const translated = holidayLabel(name);
     if (observedFor) lines.push(t(`${name} · 补休（原节日 ${observedFor}）`, `${translated} · Observed (original date ${observedFor})`));
     else lines.push(isOffDay ? t(`${name} · 法定假`, `${translated} · Public holiday`) : t(`${name} · 调休补班`, `${translated} · Make-up workday`));
-  } else if (info.dow === 0 || info.dow === 6) {
+  } else if (info.weekend) {
     lines.push(t('周末', 'Weekend'));
   } else {
     lines.push(t('工作日', 'Workday'));
@@ -138,6 +138,9 @@ export function renderMonth(year, month, container, dataStore, todayStr, selecte
   // month is 1-12
   // Clear existing day cells, keep header (7 .cal-head)
   const heads = container.querySelectorAll('.cal-head');
+  for (const head of heads) {
+    head.classList.toggle('cal-head--weekend', isWeekend(Number(head.dataset.weekday), dayOptions?.weekendDays));
+  }
   container.replaceChildren(...heads);
 
   for (const { date, otherMonth } of getMonthCells(year, month)) {
@@ -148,7 +151,7 @@ export function renderMonth(year, month, container, dataStore, todayStr, selecte
 function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activityTerm, leaveDates, dayOptions) {
   const dateStr = formatDate(dateObj);
   const info = describeDay(dateStr, dataStore, dayOptions);
-  const { meta, dow, lunarInfo } = info;
+  const { meta, weekend, lunarInfo } = info;
 
   const cell = document.createElement('div');
   cell.className = 'day';
@@ -166,7 +169,7 @@ function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activit
 
   if (meta) {
     cell.classList.add(meta.isOffDay ? 'day--holiday' : 'day--makeup');
-  } else if (dow === 0 || dow === 6) {
+  } else if (weekend) {
     cell.classList.add('day--weekend');
   }
   const titleParts = describeDayText(info);

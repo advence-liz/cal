@@ -45,6 +45,10 @@
             <button type="button" data-region="GB" data-i18n="regionGB" aria-pressed="false">英格兰和威尔士</button>
             <button type="button" data-region="FR" data-i18n="regionFR" aria-pressed="false">法国本土</button>
             <button type="button" data-region="ZA" data-i18n="regionZA" aria-pressed="false">南非</button>
+            <button type="button" data-region="IN" data-i18n="regionIN" aria-pressed="false">印度（德里中央机关）</button>
+            <button type="button" data-region="BR" data-i18n="regionBR" aria-pressed="false">巴西</button>
+            <button type="button" data-region="AU" data-i18n="regionAU" aria-pressed="false">澳大利亚（新南威尔士州）</button>
+            <button type="button" data-region="SA" data-i18n="regionSA" aria-pressed="false">沙特阿拉伯（金融机构）</button>
             <p class="region-scope" id="holidayScope">国务院办公厅口径，含调休补班</p>
           </div>
         </details>
@@ -91,13 +95,13 @@
       </div>
 
       <div class="cal-grid" id="calGrid">
-        <div class="cal-head" data-i18n="weekday1">一</div>
-        <div class="cal-head" data-i18n="weekday2">二</div>
-        <div class="cal-head" data-i18n="weekday3">三</div>
-        <div class="cal-head" data-i18n="weekday4">四</div>
-        <div class="cal-head" data-i18n="weekday5">五</div>
-        <div class="cal-head sat" data-i18n="weekday6">六</div>
-        <div class="cal-head sun" data-i18n="weekday0">日</div>
+        <div class="cal-head" data-weekday="1" data-i18n="weekday1">一</div>
+        <div class="cal-head" data-weekday="2" data-i18n="weekday2">二</div>
+        <div class="cal-head" data-weekday="3" data-i18n="weekday3">三</div>
+        <div class="cal-head" data-weekday="4" data-i18n="weekday4">四</div>
+        <div class="cal-head" data-weekday="5" data-i18n="weekday5">五</div>
+        <div class="cal-head cal-head--weekend" data-weekday="6" data-i18n="weekday6">六</div>
+        <div class="cal-head cal-head--weekend" data-weekday="0" data-i18n="weekday0">日</div>
       </div>
 
       <div class="day-popover" id="dayPopover" hidden role="tooltip"></div>

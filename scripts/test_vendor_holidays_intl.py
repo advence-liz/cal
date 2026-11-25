@@ -1,5 +1,4 @@
 import unittest
-from datetime import date
 
 from vendor_holidays_intl import MergeError, parse_ics, parse_mom, reconcile_sg, us_years, merge_years
 
@@ -39,7 +38,148 @@ def mom_html(note=SG_NOTE, rows=SG_2027):
     return f'<table class="table table--holiday"><tbody>{body}</tbody></table>'
 
 
+NSW_2026_27 = '''<h2 id="nsw-public-holidays"><a id="public-holidays"></a>NSW public holidays 2026 to 2027</h2>
+<table class="nsw-table nsw-table--striped"><thead><tr><th>Holiday</th><th>2026</th><th>2027</th></tr></thead><tbody>
+<tr><td>New Year's Day</td><td>Thursday 1 January 2026</td><td>Friday 1 January 2027</td></tr>
+<tr><td><sup>3</sup>Additional Day</td><td>Not applicable</td><td>Not applicable</td></tr>
+<tr><td><sup>2</sup>Australia Day</td><td>Monday 26 January 2026</td><td>Tuesday 26 January 2027</td></tr>
+<tr><td>Good Friday</td><td>Friday 3 April 2026</td><td>Friday 26 March 2027</td></tr>
+<tr><td>Easter Saturday</td><td>Saturday 4 April 2026</td><td>Saturday 27 March 2027</td></tr>
+<tr><td>Easter Sunday</td><td>Sunday 5 April 2026</td><td>Sunday 28 March 2027</td></tr>
+<tr><td>Easter Monday</td><td>Monday 6 April 2026</td><td>Monday 29 March 2027</td></tr>
+<tr><td>Anzac Day</td><td>Saturday 25 April 2026</td><td>Sunday 25 April 2027</td></tr>
+<tr><td>Additional Day</td><td>Monday 27 April 2026</td><td>Monday 26 April 2027</td></tr>
+<tr><td>King’s Birthday</td><td>Monday 8 June 2026</td><td>Monday 14 June 2027</td></tr>
+<tr><td><sup>1</sup>Bank Holiday</td><td>Monday 3 August 2026</td><td>Monday 2 August 2027</td></tr>
+<tr><td>Labour Day</td><td>Monday 5 October 2026</td><td>Monday 4 October 2027</td></tr>
+<tr><td>Christmas Day</td><td>Friday 25 December 2026</td><td>Saturday 25 December 2027</td></tr>
+<tr><td><sup>3</sup>Additional Day</td><td>Not applicable</td><td>Monday 27 December 2027</td></tr>
+<tr><td>Boxing Day</td><td>Saturday 26 December 2026</td><td>Sunday 26 December 2027</td></tr>
+<tr><td><sup>3</sup>Additional Day</td><td>Monday 28 December 2026</td><td>Tuesday 28 December 2027</td></tr>
+</tbody></table>
+<h2>Local holidays</h2><table class="nsw-table"><tr><td>Sydney local event</td><td>Friday 13 November 2026</td></tr></table>'''
+
+
+SAMA_NOTE = ('If the National Day or Founding Day falls on a Friday then the holiday will be on a Thursday, '
+             'and if they fall on a Saturday then the holiday will be on a Sunday.')
+
+
+def sama_range(hijri, year, start, end):
+    return f'''<div class="holiday-years__item">
+      <div class="holiday-years__year"><div class="label">Year</div><div class="value">{hijri}H - {year}</div></div>
+      <div class="holiday-years__details">
+        <p class="holiday-years__line">Starts on {start}</p>
+        <p class="holiday-years__line">Ends on {end}&#160;​<br/></p>
+      </div>
+    </div>'''
+
+
+def sama_html(fitr, adha):
+    buttons = ('Eid Al -Fitr Holiday', 'Eid Al-Adha Holiday', 'National&#160;Day and Founding Day')
+    tabs = ''.join(f'<button id="tab{i}-tab" data-bs-target="#tab{i}-pane">{label}</button>'
+                   for i, label in enumerate(buttons, 1))
+    eids = ''.join(f'''<div id="tab{i}-pane" aria-labelledby="tab{i}-tab">
+      <div class="holiday-card">
+        <div class="holiday-card__header"><h3>Official Holidays of Financial Institutions</h3></div>
+        <div class="holiday-card__body"><div class="holiday-years">{ranges}</div>
+          <h3>Official Holidays for the Saudi Arabian Riyal Interbank Express System (RTGS)</h3>
+          <div class="holiday-years">{rtgs}</div>
+        </div>
+      </div>
+    </div>''' for i, ranges, rtgs in (
+        (1, fitr, sama_range(1449, 2028, 'Wednesday (28/09/1449H) corresponding to (23/02/2028)',
+                             'Thursday (29/09/1449H) corresponding to (24/02/2028)')),
+        (2, adha, sama_range(1449, 2028, 'Thursday (09/12/1449H) corresponding to (04/05/2028)',
+                             'Sunday (12/12/1449H) corresponding to (07/05/2028)'))))
+    return tabs + eids + f'''<div id="tab3-pane" aria-labelledby="tab3-tab">
+      <h3>National Day and Funding Day</h3>
+      <h6 class="card-title">The Saudi National Day is on the 23rd of September every year .</h6>
+      <h6 class="card-title">The Founding Day is on the 22nd of February every year.</h6>
+      <span class="note-sub-title">{SAMA_NOTE}</span>
+    </div>'''
+
+
+SAMA_2028 = sama_html(
+    sama_range(1449, 2028, 'Sunday (02/10/1449H) corresponding to (27/02/2028)',
+               'Thursday (06/10/1449H) corresponding to (02/03/2028)'),
+    sama_range(1449, 2028, 'Wednesday&#160;(08/12/1449H) corresponding to (03/05/2028)',
+               'Tuesday&#160;(14/12/1449H) corresponding to (09/05/2028)'),
+)
+
+
 class IntlHolidayTests(unittest.TestCase):
+    def test_nsw_statewide_only_and_additional_days(self):
+        from vendor_holidays_intl import au_years
+        out = au_years(NSW_2026_27)
+        self.assertEqual(set(out), {'2026', '2027'})
+        self.assertEqual([len(out[y]) for y in ('2026', '2027')], [13, 14])
+        self.assertIn(['2026-04-25', '澳新军团日'], out['2026'])
+        self.assertIn(['2026-04-27', '澳新军团日', '2026-04-25'], out['2026'])
+        self.assertIn(['2027-04-26', '澳新军团日', '2027-04-25'], out['2027'])
+        self.assertIn(['2027-12-27', '圣诞节', '2027-12-25'], out['2027'])
+        self.assertIn(['2027-12-28', '节礼日', '2027-12-26'], out['2027'])
+        self.assertFalse({'2026-08-03', '2026-11-13'} & {row[0] for row in out['2026']})
+
+    def test_nsw_rejects_missing_or_shifted_rows_and_changed_layout(self):
+        from vendor_holidays_intl import au_years
+        for edited in (
+            NSW_2026_27.replace('id="nsw-public-holidays"', 'id="local-public-holidays"'),
+            NSW_2026_27.replace('<th>2026</th>', '<th>2025</th>'),
+            NSW_2026_27.replace('Saturday 4 April', 'Sunday 4 April'),
+            NSW_2026_27.replace('<td>Sunday 5 April 2026</td>', '<td>Sunday 5 April 2026</td><td>extra</td>'),
+            NSW_2026_27.replace('Monday 27 April 2026', 'Not applicable'),
+            NSW_2026_27.replace('Monday 28 December 2026', 'Not applicable'),
+            NSW_2026_27.replace('Christmas Day</td>', 'A different holiday</td>'),
+            NSW_2026_27.split('</table>', 1)[0],
+        ):
+            with self.subTest(edited=edited[:100]), self.assertRaises(MergeError):
+                au_years(edited)
+
+    def test_sama_expands_only_financial_institution_ranges_and_uses_sunday_substitute(self):
+        from vendor_holidays_intl import sa_years
+        out = sa_years(SAMA_2028)
+        self.assertEqual(set(out), {'2028'})
+        self.assertEqual(out['2028'][:6], [
+            ['2028-02-22', '沙特建国日'], ['2028-02-27', '沙特开斋节'], ['2028-02-28', '沙特开斋节'],
+            ['2028-02-29', '沙特开斋节'], ['2028-03-01', '沙特开斋节'], ['2028-03-02', '沙特开斋节'],
+        ])
+        self.assertIn(['2028-05-03', '宰牲节'], out['2028'])
+        self.assertIn(['2028-05-09', '宰牲节'], out['2028'])
+        self.assertEqual(len(out['2028']), 14)
+        self.assertEqual(out['2028'][-1], ['2028-09-24', '沙特国庆日', '2028-09-23'])
+
+    def test_sama_uses_thursday_substitute_for_friday(self):
+        from vendor_holidays_intl import sa_years
+        page = sama_html(
+            sama_range(1451, 2030, 'Sunday (01/10/1451H) corresponding to (03/02/2030)',
+                       'Thursday (05/10/1451H) corresponding to (07/02/2030)'),
+            sama_range(1451, 2030, 'Sunday (08/12/1451H) corresponding to (07/04/2030)',
+                       'Thursday (12/12/1451H) corresponding to (11/04/2030)'),
+        )
+        out = sa_years(page)['2030']
+        self.assertIn(['2030-02-21', '沙特建国日', '2030-02-22'], out)
+        self.assertNotIn('2030-02-22', {row[0] for row in out})
+
+    def test_sama_rejects_wrong_boundaries_years_layout_or_clause(self):
+        from vendor_holidays_intl import sa_years
+        for old, new in (
+            ('(27/02/2028)', '(30/02/2028)'),
+            ('(27/02/2028)', '(27/02/2029)'),
+            ('Sunday (02/10/1449H)', 'Monday (02/10/1449H)'),
+            ('Thursday (06/10/1449H) corresponding to (02/03/2028)',
+             'Saturday (06/10/1449H) corresponding to (26/02/2028)'),
+            ('Ends on Thursday (06/10/1449H)', 'Starts on Thursday (06/10/1449H)'),
+            ('1449H - 2028', '1450H - 2028'),
+            ('Eid Al -Fitr Holiday', 'Eid Al-Adha Holiday'),
+            ('Official Holidays of Financial Institutions', 'Official Holidays of Banks'),
+            ('class="holiday-years"', 'class="replaced-layout"'),
+            ('23rd of September', '24th of September'),
+            ('holiday will be on a Thursday', 'holiday will be on a Friday'),
+        ):
+            with self.subTest(old=old), self.assertRaises(MergeError):
+                sa_years(SAMA_2028.replace(old, new, 1))
+
+
     def test_folded_ics_and_us_observed_cross_year(self):
         raw = ics(US_2027 + [('20270120', 'Inauguration Day')]).replace('Birthday of Martin', 'Birthday of\r\n  Martin')
         out = us_years(raw, 2027)

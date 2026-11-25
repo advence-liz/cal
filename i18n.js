@@ -21,6 +21,11 @@ const holidayEn = {
   复活节星期一: 'Easter Monday', 五月初银行假日: 'Early May Bank Holiday', 春季银行假日: 'Spring Bank Holiday', 夏季银行假日: 'Summer Bank Holiday', 节礼日: 'Boxing Day',
   二战胜利日: 'Victory in Europe Day', 耶稣升天节: 'Ascension Day', 圣灵降临节星期一: 'Whit Monday', 法国国庆日: 'Bastille Day', 圣母升天节: 'Assumption Day', 诸圣节: 'All Saints’ Day', 停战纪念日: 'Armistice Day',
   人权日: 'Human Rights Day', 家庭日: 'Family Day', 自由日: 'Freedom Day', 青年日: 'Youth Day', 全国妇女节: 'National Women’s Day', 遗产日: 'Heritage Day', 和解日: 'Day of Reconciliation', 善意日: 'Day of Goodwill',
+  印度共和国日: 'Republic Day', 洒红节: 'Holi', 罗摩诞辰: 'Ram Navami', 摩诃毗罗诞辰: 'Mahavir Jayanti', 安贝德卡诞辰: 'Ambedkar Jayanti',
+  穆哈兰姆节: 'Muharram', 印度独立日: 'Independence Day', 圣纪节: 'Milad-un-Nabi', 克里希纳诞辰: 'Janmashtami', 甘地诞辰: 'Gandhi Jayanti', 十胜节: 'Dussehra', 古鲁那纳克诞辰: 'Guru Nanak’s Birthday',
+  蒂拉登特斯纪念日: 'Tiradentes Day', 巴西独立日: 'Independence Day', 阿帕雷西达圣母日: 'Our Lady of Aparecida', 追思亡者节: 'All Souls’ Day', 共和国宣告日: 'Proclamation of the Republic', 黑人意识日: 'Black Awareness Day',
+  澳大利亚日: 'Australia Day', 复活节星期六: 'Easter Saturday', 复活节星期日: 'Easter Sunday', 澳新军团日: 'Anzac Day', 国王诞辰: 'King’s Birthday',
+  沙特开斋节: 'Eid al-Fitr', 宰牲节: 'Eid al-Adha', 沙特国庆日: 'Saudi National Day', 沙特建国日: 'Founding Day',
   除夕: 'Chinese New Year’s Eve', 元宵节: 'Lantern Festival', 龙抬头: 'Dragon Head Festival', 七夕节: 'Qixi Festival', 中元节: 'Ghost Festival', 重阳节: 'Double Ninth Festival', 腊八节: 'Laba Festival', 小年: 'Little New Year',
 };
 export function holidayLabel(name) {
@@ -38,6 +43,8 @@ const staticText = {
   regionCN: ['中国大陆', 'Mainland China'], regionUS: ['美国联邦', 'US Federal'], regionSG: ['新加坡', 'Singapore'],
   regionJP: ['日本', 'Japan'], regionGB: ['英格兰和威尔士', 'England & Wales'],
   regionFR: ['法国本土', 'Metropolitan France'], regionZA: ['南非', 'South Africa'],
+  regionIN: ['印度（德里中央机关）', 'India (Delhi Central Govt.)'], regionBR: ['巴西', 'Brazil'],
+  regionAU: ['澳大利亚（新南威尔士州）', 'Australia (NSW)'], regionSA: ['沙特阿拉伯（金融机构）', 'Saudi Arabia (Financial Institutions)'],
   clockTitle: ['时钟时区', 'Clock time zone'], clockAuto: ['跟随假期地区', 'Follow holiday region'],
   today: ['回到今天', 'Today'], todayShort: ['今天', 'Today'],
   weekday1: ['一', 'Mon'], weekday2: ['二', 'Tue'], weekday3: ['三', 'Wed'], weekday4: ['四', 'Thu'], weekday5: ['五', 'Fri'], weekday6: ['六', 'Sat'], weekday0: ['日', 'Sun'],

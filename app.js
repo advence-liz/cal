@@ -141,6 +141,7 @@ function todayStr() {
 }
 
 const currentStore = () => getDataStore(state.region);
+const currentWeekend = () => REGIONS[state.region].weekendDays;
 
 async function ensureYears(years, region = state.region) {
   const needed = years.filter((year) => !hasYear(year, region));
@@ -158,7 +159,7 @@ function estimateNote(start, end, store) {
 }
 
 function dayViewOptions() {
-  return { showLunar: state.showAlmanac, showChineseFestivals: state.region === DEFAULT_REGION };
+  return { showLunar: state.showAlmanac, showChineseFestivals: state.region === DEFAULT_REGION, weekendDays: currentWeekend() };
 }
 
 function renderCalendar() {
@@ -241,7 +242,7 @@ function renderWorkdayRemaining(store) {
   const el = $('workdayRemaining');
   const year = state.today.slice(0, 4);
   const end = `${year}-12-31`;
-  const remaining = countWorkdays(state.today, end, store);
+  const remaining = countWorkdays(state.today, end, store, currentWeekend());
   const estimated = !store.has(Number(year));
   el.innerHTML = t(`今年还剩 <strong>${remaining}</strong>&nbsp;个工作日`, `<strong>${daysLabel(remaining, 'workday')}</strong> left this year`) +
     (estimated ? t('（仅按周末估算）', ' (weekend-only estimate)') : '');
@@ -296,7 +297,7 @@ function bindCount() {
     await ensureYears(wanted);
     if (regionVersion !== state.regionVersion) return;
     try {
-      const n = countWorkdays(start, end, store);
+      const n = countWorkdays(start, end, store, currentWeekend());
       const totalDays = Math.round((parseDate(end) - parseDate(start)) / 86400000) + 1;
       const note = estimateNote(start, end, store);
       out.innerHTML = t(`区间共 ${totalDays} 天，其中工作日 <strong>${n}</strong> 天`, `${daysLabel(totalDays)} total, <strong>${daysLabel(n, 'workday')}</strong>`) + note;
@@ -333,7 +334,7 @@ function bindAdd() {
     await ensureYears(wanted);
     if (regionVersion !== state.regionVersion) return;
     try {
-      const result = addWorkdays(start, n, store);
+      const result = addWorkdays(start, n, store, currentWeekend());
       const first = n === 0 ? start : addDays(start, Math.sign(n));
       const note = n === 0 ? '' : estimateNote(first < result ? first : result, first > result ? first : result, store);
       out.innerHTML = `${t('结果：', 'Result: ')}<strong>${result}</strong>${note}`;
@@ -480,7 +481,7 @@ function bindLeavePlan() {
     const covered = new Map(horizonDays ? yearsInRange(today, horizonDays).map((year) => [year, store.get(year)]) : []);
     renderNextHoliday(covered);
     renderWorkdayRemaining(store);
-    renderList(horizonDays ? suggestHolidayOpportunities(store, { fromDate: today, horizonDays }) : []);
+    renderList(horizonDays ? suggestHolidayOpportunities(store, { fromDate: today, horizonDays, weekendDays: currentWeekend() }) : []);
     $('leaveCoverage').hidden = horizonDays === DEFAULT_HORIZON_DAYS;
   }
 
@@ -870,6 +871,8 @@ function updateRegionChrome() {
   const sourceEn = {
     CN: label, US: 'U.S. Office of Personnel Management (OPM)', SG: 'Singapore Ministry of Manpower (MOM)',
     JP: 'Japan Cabinet Office', GB: 'GOV.UK', FR: 'French government public holiday data', ZA: 'South African Government',
+    IN: 'Delhi central-government holiday notices', BR: 'Brazilian federal holiday law',
+    AU: 'New South Wales Government', SA: 'Saudi Central Bank (SAMA)',
   };
   $('holidaySource').textContent = t(label, sourceEn[state.region]);
   const scopeEn = {
@@ -880,6 +883,10 @@ function updateRegionChrome() {
     GB: 'Bank holidays for England and Wales only, including substitute days; excludes Scotland and Northern Ireland.',
     FR: 'General metropolitan France public holidays; excludes regional and overseas additions. Check your employer’s schedule.',
     ZA: 'Nationwide public holidays. When a holiday falls on Sunday, the following Monday is also a public holiday.',
+    IN: 'Gazetted holidays for Delhi/New Delhi central-government administrative offices. Excludes optional, state and private-sector holidays.',
+    BR: 'Fixed nationwide statutory holidays only. Excludes state and municipal holidays, election days and optional federal-office closures.',
+    AU: 'Statewide public holidays and additional days published by NSW. Excludes local and bank-only holidays.',
+    SA: 'Financial institutions only. Friday and Saturday are weekends; Sunday through Thursday are workdays. Individual branches may differ.',
   };
   $('holidayScope').textContent = t(scope, scopeEn[state.region]);
   $('makeupLegend').hidden = state.region !== DEFAULT_REGION;

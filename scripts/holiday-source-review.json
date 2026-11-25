@@ -1,0 +1,114 @@
+{
+  "reviewed_on": "2026-11-25",
+  "scope": {
+    "in": "Delhi/New Delhi central-government holidays only. AIIMS bulletin includes unrelated notices; keep them in the signal so ambiguous new notices are still reviewed. Pinned PDFs are checked even when they drop off the bulletin. The bulletin is not a comprehensive DoPT feed.",
+    "br": "Nine recurring nationwide holidays only. Câmara dos Deputados Dados da Norma records expose amendment/revocation metadata for the laws referenced by the calendar. The pinned set cannot detect every standalone new law or an update not yet indexed by Câmara. The Agência Gov annual federal-office calendar is context, not the legal baseline."
+  },
+  "sources": {
+    "in": [
+      {
+        "label": "AIIMS vacations and holidays bulletin",
+        "url": "https://www.aiims.edu/index.php/en/administrative-structure-nddtc/241-notices/vacations-holidays",
+        "kind": "bulletin",
+        "section": "div.blog",
+        "contains": "Administrative structure",
+        "expected": {
+          "links": [
+            "https://www.aiims.edu/images/pdf/notice/facultycell-18-11-26.pdf",
+            "https://www.aiims.edu/images/pdf/notice/generalsect-23-9-26.pdf",
+            "https://www.aiims.edu/images/pdf/notice/generalsect-25-5-26.pdf",
+            "https://www.aiims.edu/images/pdf/notice/generalsect-9-9-26.pdf",
+            "https://www.aiims.edu/images/pdf/notice/generalsect1-9-9-26.pdf",
+            "https://www.aiims.edu/index.php/en/administrative-structure-nddtc/241-notices/vacations-holidays/23408-2026-grant-of-summer-vacation-2026-to-the-faculty-staff",
+            "https://www.aiims.edu/index.php/en/administrative-structure-nddtc/241-notices/vacations-holidays/23449-14-2026-declaration-of-holiday-on-14th-april-2026-birthday-of-dr-b-r-ambedkar",
+            "https://www.aiims.edu/index.php/en/administrative-structure-nddtc/241-notices/vacations-holidays/23529-summer-vacation-schedule-ist-iind-half-for-deptt-of-neuro-surgery",
+            "https://www.aiims.edu/index.php/en/administrative-structure-nddtc/241-notices/vacations-holidays/23647-grant-of-summer-vacation-2026-to-the-faculty-staff"
+          ],
+          "notices_sha256": "794ac313de686cc11d504ae9279bf036e78338cb5d8892b7e2b57218f9185deb"
+        }
+      },
+      {
+        "label": "2026 DoPT annual order, Annexure I (NHSRC copy)",
+        "url": "https://nhsrcindia.org/sites/default/files/Holidays_year_2026.pdf",
+        "kind": "pdf",
+        "expected": "eee083efff2b4284fd96fb81af8ac0496ed5138cfc3ae3357531dd7f3d4df834"
+      },
+      {
+        "label": "2026 Ambedkar birthday declaration (AIIMS)",
+        "url": "https://www.aiims.edu/images/pdf/notice/generalsect-11-4-26.pdf",
+        "kind": "pdf",
+        "expected": "b943e170cfd31d2c5fa05ec7d7a0577ac7d1eb26c4f182e1ad6cd15def779396"
+      },
+      {
+        "label": "2026 Bakrid date revision (AIIMS)",
+        "url": "https://www.aiims.edu/images/pdf/notice/generalsect-25-5-26.pdf",
+        "kind": "pdf",
+        "expected": "84b6727b07a7d5aaa17a4f1bed55b1f130fd615db03f919472dd13ceabfe5ad8"
+      },
+      {
+        "label": "2026 Bakrid date revision (PIB)",
+        "url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2264022&lang=2&reg=3",
+        "kind": "html",
+        "section": "div#pibReleaseBody",
+        "contains": "Central Government Administrative Offices located at Delhi/New Delhi",
+        "expected": "8586d63fe75f33646f4c0d60ff174e5735e82c834e5687cd07b8d98e67844a0c"
+      },
+      {
+        "label": "2027 Delhi/New Delhi holiday order (AIIMS)",
+        "url": "https://www.aiims.edu/images/pdf/notice/generalsect-23-9-26.pdf",
+        "kind": "pdf",
+        "expected": "6cbd892e91795fabe64fe60467c8493ef1267eb688bd65851dacb244417a6577"
+      }
+    ],
+    "br": [
+      {
+        "label": "Lei 662/1949 (Câmara law record)",
+        "url": "https://www2.camara.leg.br/legin/fed/lei/1940-1949/lei-662-6-abril-1949-347136-norma-pl.html",
+        "kind": "html",
+        "section": "div#content",
+        "contains": "LEI Nº 662, DE 6 DE ABRIL DE 1949",
+        "expected": "e017ca0cc5d8bf6388b588fe4a3512e8333dd46fd79b8c3ee53e9393fa8885d0"
+      },
+      {
+        "label": "Lei 662/1949 (Câmara consolidated text)",
+        "url": "https://www2.camara.leg.br/legin/fed/lei/1940-1949/lei-662-6-abril-1949-347136-normaatualizada-pl.html",
+        "kind": "html",
+        "section": "body",
+        "contains": "LEI Nº 662, DE 6 DE ABRIL DE 1949",
+        "expected": "3a790003b5ed702af0e1d19a3ed91b297a4a65cc57d1786f3921923de54885d4"
+      },
+      {
+        "label": "Lei 10.607/2002 (Câmara law record)",
+        "url": "https://www2.camara.leg.br/legin/fed/lei/2002/lei-10607-19-dezembro-2002-473572-norma-pl.html",
+        "kind": "html",
+        "section": "div#content",
+        "contains": "LEI Nº 10.607, DE 19 DE DEZEMBRO DE 2002",
+        "expected": "0e68b81168e75b8d8a738f97cdd82facdf4c5bcc090e739b926c06c7b13facb1"
+      },
+      {
+        "label": "Lei 6.802/1980 (Câmara law record)",
+        "url": "https://www2.camara.leg.br/legin/fed/lei/1980-1987/lei-6802-30-junho-1980-357065-norma-pl.html",
+        "kind": "html",
+        "section": "div#content",
+        "contains": "LEI Nº 6.802, DE 30 DE JUNHO DE 1980",
+        "expected": "9a6d54878f93edbbefe854d63716a5ace413145275803b3e08a416216048281b"
+      },
+      {
+        "label": "Lei 14.759/2023 (Câmara law record)",
+        "url": "https://www2.camara.leg.br/legin/fed/lei/2023/lei-14759-21-dezembro-2023-795091-norma-pl.html",
+        "kind": "html",
+        "section": "div#content",
+        "contains": "LEI Nº 14.759, DE 21 DE DEZEMBRO DE 2023",
+        "expected": "378534b620f2413bdb4e4f03952a45a64cc8bb75d8b903e46a523fbf9ebc74c6"
+      },
+      {
+        "label": "Lei 9.093/1995 (Câmara law record; jurisdiction and scope)",
+        "url": "https://www2.camara.leg.br/legin/fed/lei/1995/lei-9093-12-setembro-1995-348594-norma-pl.html",
+        "kind": "html",
+        "section": "div#content",
+        "contains": "LEI Nº 9.093, DE 12 DE SETEMBRO DE 1995",
+        "expected": "606a772805a792856177093bfb1a67c99a3562c4d90370e1e987397bea7b016e"
+      }
+    ]
+  }
+}

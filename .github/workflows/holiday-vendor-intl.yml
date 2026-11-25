@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region: [us, sg, jp, gb, fr, za]
+        region: [us, sg, jp, gb, fr, za, au, sa]
     env:
       REGION: ${{ matrix.region }}
       BASE_BRANCH: ${{ github.event.repository.default_branch }}
@@ -52,7 +52,7 @@ jobs:
           npm ci
           npm exec -- puppeteer browsers install chrome
           python3 -I -m http.server 8080 --bind 127.0.0.1 &
-          for i in $(seq 1 20); do
+          for _ in $(seq 1 20); do
             if curl -fsS http://127.0.0.1:8080/tests.html >/dev/null; then
               npm test
               exit $?
@@ -98,7 +98,7 @@ jobs:
           body="$RUNNER_TEMP/holiday-pr.md"
           {
             printf '%s\n\n' 'Official holiday data changed. Parser checks and browser tests passed. Review the date changes before merging.'
-            grep -E '^(US|SG|JP|GB|FR|ZA) confirmed upstream:' "$RUNNER_TEMP/holiday-vendor.log"
+            grep -E '^(US|SG|JP|GB|FR|ZA|AU|SA) confirmed upstream:' "$RUNNER_TEMP/holiday-vendor.log"
             printf '\n%s\n' '🤖 Generated with [Claude Code](https://claude.com/claude-code)'
           } > "$body"
           if [[ -n "$pr" ]]; then

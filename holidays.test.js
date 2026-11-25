@@ -1,7 +1,8 @@
-import { loadYears, getDataStore } from './holidays.js';
-import { addWorkdays, countWorkdays, nextHolidays } from './workday.js';
+import { loadYears, getDataStore, REGIONS } from './holidays.js';
+import { addWorkdays, countWorkdays, isWorkday, nextHolidays } from './workday.js';
 import * as bridgePlan from './bridge-plan.js';
-import { describeDay, describeDayText } from './calendar.js';
+import { describeDay, describeDayText, renderMonth } from './calendar.js';
+import { clockZoneFor, regionClock } from './region-clock.js';
 import { holidayLabel, getLanguage, setLanguage } from './i18n.js';
 import { makeRunner } from './test-harness.js';
 
@@ -110,11 +111,74 @@ export async function runTests() {
     eq(addWorkdays('2027-12-24', 1, za), '2027-12-28');
   });
 
+  await checkAsync('印度按德里中央机关公告，巴西不把弹性休假算成全国假日', async () => {
+    const results = await Promise.all(['IN', 'BR'].map((region) => loadYears([2026, 2027], region)));
+    eq(results.map((years) => years.map((r) => r.source)), [['local', 'local'], ['local', 'local']]);
+    const india = getDataStore('IN');
+    const brazil = getDataStore('BR');
+    eq(addWorkdays('2026-05-26', 1, india), '2026-05-27');
+    eq(addWorkdays('2026-05-27', 1, india), '2026-05-29');
+    eq(india.get(2027).get('2027-08-15').name, '印度独立日、圣纪节');
+    eq(brazil.get(2026).get('2026-11-20').name, '黑人意识日');
+    eq(addWorkdays('2026-02-13', 1, brazil), '2026-02-16');
+    eq(addWorkdays('2026-11-19', 1, brazil), '2026-11-23');
+  });
+
+  check('沙特银行周末：周五、周六休息，周日工作；缺年时仍按同一周末估算', () => {
+    const { weekendDays } = REGIONS.SA;
+    const empty = new Map();
+    eq(['2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27']
+      .map((date) => isWorkday(date, empty, weekendDays)), [true, false, false, true]);
+    eq(countWorkdays('2026-09-24', '2026-09-27', empty, weekendDays), 2);
+    eq(addWorkdays('2026-09-24', 1, empty, weekendDays), '2026-09-27');
+    eq(addWorkdays('2026-09-27', -1, empty, weekendDays), '2026-09-24');
+    const overrides = new Map([[2026, new Map([['2026-09-25', { isOffDay: false }]])]]);
+    eq(isWorkday('2026-09-25', overrides, weekendDays), true);
+  });
+
+  check('沙特银行月历表头、日期详情和拼假使用一致的周末规则', () => {
+    const { weekendDays } = REGIONS.SA;
+    const store = new Map([[2026, new Map([['2026-09-24', { name: '假日', isOffDay: true }]])]]);
+    const options = { showLunar: false, weekendDays };
+    const grid = document.createElement('div');
+    for (const dow of [1, 2, 3, 4, 5, 6, 0]) {
+      const head = document.createElement('div');
+      head.className = 'cal-head';
+      head.dataset.weekday = dow;
+      grid.append(head);
+    }
+    renderMonth(2026, 9, grid, store, '2026-09-21', '', '', null, options);
+    eq([...grid.querySelectorAll('.cal-head--weekend')].map((cell) => cell.dataset.weekday), ['5', '6']);
+    eq(grid.querySelector('[data-date="2026-09-25"]').classList.contains('day--weekend'), true);
+    eq(grid.querySelector('[data-date="2026-09-27"]').classList.contains('day--weekend'), false);
+    eq(describeDayText(describeDay('2026-09-27', store, options))[0], '工作日');
+    const [plan] = bridgePlan.suggestHolidayOpportunities(store, { fromDate: '2026-09-23', horizonDays: 8, weekendDays });
+    eq([plan.naturalStart, plan.naturalEnd, plan.naturalDays], ['2026-09-24', '2026-09-26', 3]);
+    renderMonth(2026, 9, grid, store, '2026-09-21', '', '', null, { showLunar: false });
+    eq([...grid.querySelectorAll('.cal-head--weekend')].map((cell) => cell.dataset.weekday), ['6', '0']);
+  });
+
+  await checkAsync('新南威尔士州和沙特银行数据、补休和地区时钟各自独立', async () => {
+    const [[au], [sa, sa2028]] = await Promise.all([loadYears([2027], 'AU'), loadYears([2026, 2028], 'SA')]);
+    eq([au.source, sa.source, sa2028.source], ['local', 'local', 'local']);
+    const nsw = getDataStore('AU');
+    const saudi = getDataStore('SA');
+    eq(nsw.get(2027).get('2027-04-26').observedFor, '2027-04-25');
+    eq(nsw.get(2027).has('2027-08-02'), false); // Bank-only holiday
+    eq(saudi.get(2026).get('2026-03-23').name, '沙特开斋节');
+    eq(saudi.get(2026).has('2026-03-24'), false);
+    eq(saudi.get(2028).get('2028-09-24').observedFor, '2028-09-23');
+    eq(addWorkdays('2028-09-21', 1, saudi, REGIONS.SA.weekendDays), '2028-09-25');
+    eq(clockZoneFor('AU', 'auto'), 'AU');
+    eq(clockZoneFor('SA', 'auto'), 'SA');
+    eq(regionClock('SA', new Date('2026-09-23T00:00:00Z')), { time: '03:00', offset: 'UTC+3' });
+  });
+
   await checkAsync('10. 英文界面翻译所有已收录的假日，不修改原始数据', async () => {
     const saved = getLanguage();
     try {
       setLanguage('en');
-      for (const region of ['CN', 'US', 'SG', 'JP', 'GB', 'FR', 'ZA']) {
+      for (const region of ['CN', 'US', 'SG', 'JP', 'GB', 'FR', 'ZA', 'IN', 'BR', 'AU', 'SA']) {
         await loadYears([2025, 2026, 2027], region);
         for (const yearStore of getDataStore(region).values()) {
           for (const { name } of yearStore.values()) eq(/[㐀-鿿]/u.test(holidayLabel(name)), false);

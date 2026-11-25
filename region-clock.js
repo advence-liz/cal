@@ -10,7 +10,9 @@ export const CLOCK_ZONES = {
   US_WEST: { timeZone: 'America/Los_Angeles', city: ['洛杉矶（美西）', 'Los Angeles (PT)'] },
   DE: { timeZone: 'Europe/Berlin', city: ['柏林', 'Berlin'] },
   IN: { timeZone: 'Asia/Kolkata', city: ['新德里', 'New Delhi'] },
+  BR: { timeZone: 'America/Sao_Paulo', city: ['圣保罗', 'São Paulo'] },
   AU: { timeZone: 'Australia/Sydney', city: ['悉尼', 'Sydney'] },
+  SA: { timeZone: 'Asia/Riyadh', city: ['利雅得', 'Riyadh'] },
   UTC: { timeZone: 'UTC', city: ['协调世界时', 'UTC'] },
 };
 

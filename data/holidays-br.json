@@ -1,0 +1,40 @@
+{
+  "source": "https://www.planalto.gov.br/ccivil_03/leis/l0662.htm",
+  "scope": "Recurring nationwide holidays declared by federal law. Excludes election days, state and municipal holidays, and federal-office optional closures. Good Friday is not included in this nationwide-only baseline, even though it appears in the federal administration calendar.",
+  "references": ["https://www.planalto.gov.br/ccivil_03/leis/2002/l10607.htm", "https://www.planalto.gov.br/ccivil_03/leis/l6802.htm", "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/lei/l14759.htm", "https://www.planalto.gov.br/ccivil_03/leis/l9093.htm"],
+  "years": {
+    "2025": [
+      ["2025-01-01", "元旦"],
+      ["2025-04-21", "蒂拉登特斯纪念日"],
+      ["2025-05-01", "劳动节"],
+      ["2025-09-07", "巴西独立日"],
+      ["2025-10-12", "阿帕雷西达圣母日"],
+      ["2025-11-02", "追思亡者节"],
+      ["2025-11-15", "共和国宣告日"],
+      ["2025-11-20", "黑人意识日"],
+      ["2025-12-25", "圣诞节"]
+    ],
+    "2026": [
+      ["2026-01-01", "元旦"],
+      ["2026-04-21", "蒂拉登特斯纪念日"],
+      ["2026-05-01", "劳动节"],
+      ["2026-09-07", "巴西独立日"],
+      ["2026-10-12", "阿帕雷西达圣母日"],
+      ["2026-11-02", "追思亡者节"],
+      ["2026-11-15", "共和国宣告日"],
+      ["2026-11-20", "黑人意识日"],
+      ["2026-12-25", "圣诞节"]
+    ],
+    "2027": [
+      ["2027-01-01", "元旦"],
+      ["2027-04-21", "蒂拉登特斯纪念日"],
+      ["2027-05-01", "劳动节"],
+      ["2027-09-07", "巴西独立日"],
+      ["2027-10-12", "阿帕雷西达圣母日"],
+      ["2027-11-02", "追思亡者节"],
+      ["2027-11-15", "共和国宣告日"],
+      ["2027-11-20", "黑人意识日"],
+      ["2027-12-25", "圣诞节"]
+    ]
+  }
+}

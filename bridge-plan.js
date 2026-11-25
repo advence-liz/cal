@@ -2,7 +2,7 @@
 // most cost-effective way to bridge an adjacent work-gap with annual leave
 // into one long consecutive break. Pure logic, no DOM.
 
-import { addDays, parseDate } from './workday.js';
+import { addDays, parseDate, isWeekend } from './workday.js';
 
 const MAX_HOPS = 4;
 export const DEFAULT_HORIZON_DAYS = 400;
@@ -29,22 +29,22 @@ export function coveredDays(fromDate, horizonDays, store) {
   return horizonDays;
 }
 
-function dayInfo(dataStore, dateStr) {
+function dayInfo(dataStore, dateStr, weekendDays) {
   const year = Number(dateStr.slice(0, 4));
   const yearMap = dataStore.get(year);
   const meta = yearMap ? yearMap.get(dateStr) : undefined;
   if (meta) return { off: meta.isOffDay, name: meta.isOffDay ? meta.name : null };
   const dow = parseDate(dateStr).getDay();
-  return { off: dow === 0 || dow === 6, name: null };
+  return { off: isWeekend(dow, weekendDays), name: null };
 }
 
 // Alternating off/workday runs covering [fromDate, fromDate + horizonDays).
-function buildSegments(dataStore, fromDate, horizonDays) {
+function buildSegments(dataStore, fromDate, horizonDays, weekendDays) {
   const segments = [];
   let cursor = fromDate;
   let cur = null;
   for (let i = 0; i < horizonDays; i++) {
-    const { off, name } = dayInfo(dataStore, cursor);
+    const { off, name } = dayInfo(dataStore, cursor, weekendDays);
     if (cur && cur.off === off) {
       cur.dates.push(cursor);
       if (name) cur.names.add(name);
@@ -156,8 +156,8 @@ function reconstructPlan(segments, coreIdx, option) {
 // Holidays reached by bridging from either side collapse into one row keyed
 // by the resulting date range (bridging from 中秋 into 国庆 and bridging from
 // 国庆 into 中秋 land on the same block).
-export function suggestHolidayOpportunities(dataStore, { fromDate, horizonDays = DEFAULT_HORIZON_DAYS, maxLeaveDays = Infinity } = {}) {
-  const segments = buildSegments(dataStore, fromDate, horizonDays);
+export function suggestHolidayOpportunities(dataStore, { fromDate, horizonDays = DEFAULT_HORIZON_DAYS, maxLeaveDays = Infinity, weekendDays } = {}) {
+  const segments = buildSegments(dataStore, fromDate, horizonDays, weekendDays);
   const coreIdxs = [];
   segments.forEach((seg, i) => { if (seg.off && seg.names.size > 0) coreIdxs.push(i); });
 

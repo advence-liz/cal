@@ -1,0 +1,33 @@
+name: Review India and Brazil holiday sources
+
+on:
+  schedule:
+    - cron: '37 4 * * 4' # Thursday 04:37 UTC, on the default branch
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - '.github/workflows/holiday-source-review.yml'
+      - 'scripts/check_holiday_sources.py'
+      - 'scripts/test_check_holiday_sources.py'
+      - 'scripts/holiday-source-review.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: holiday-source-review-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test review logic without network access
+        run: python3 -B -m unittest discover -s scripts -p 'test_check_holiday_sources.py'
+      - name: Check official sources and report changes for manual review
+        if: github.event_name != 'pull_request'
+        run: python3 -IB scripts/check_holiday_sources.py
