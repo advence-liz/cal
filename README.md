@@ -76,12 +76,19 @@ OpenCode：`opencode.json`
 
 </details>
 
-### 三个工具都只读，缺失年份不估算
+### 八个工具都只读，时区和假期地区分开
 
 | 工具 | 参数与用途 |
 | --- | --- |
-| `list_regions` | 无参数。返回地区代码、适用范围、周末规则和已核对的年份。 |
+| `list_regions` | 无参数。返回假期地区代码、适用范围、周末规则和已核对的年份。 |
 | `get_holidays` | `region`、`year`。返回某地区某年的假期和调休补班，含可识别的原假期日期。 |
-| `count_workdays` | `region`、`start`、`end`。按该地区的周末、假期和调休规则计算，包含起止两天；日期用 `YYYY-MM-DD`。 |
+| `count_workdays` | `region`、`start`、`end`。按该地区的周末、假期和调休规则计算，包含起止两天。 |
+| `add_workdays` | `region`、`start`、`n`。`n` 是 -10,000 到 10,000 的整数，正数往后、负数往前，不计起始日；`n=0` 返回起始日。 |
+| `convert_timezone` | `datetime`、`from_tz`、`to_tz`。输入带日期的 ISO 当地时间，返回目标时区的日期时间、UTC 偏移量和同一时刻的 UTC 时间。 |
+| `get_local_time` | `time_zones`。一次查看 1–5 个 IANA 时区在同一时刻的当地日期、时间和 UTC 偏移量。 |
+| `suggest_leave_plan` | `region`、`start`、`end`、`max_leave_days`。在 1–366 天内（含起止日），用不超过预算的请假天数找含法定假期的最长连休。预算是 0–30 的整数；并列时先选少请假的，再选开始日期较早的。 |
+| `find_meeting_windows` | `start`、`end`、`participants`、可选 `duration_minutes`（最短重叠时长，默认 30 分钟）。按第一位参与者的时区查 1–7 天（含起止日），适用 2–4 人。每人分别提供假期 `region` 和 IANA `time_zone`，可自定义同日的 `work_start` 和 `work_end`（默认 `09:00`–`18:00`）。只计算共同办公时段，不查询个人忙闲，也不预约会议。 |
 
-如果查询年份没有已核对的数据，MCP 会明确报错，不会将其当作「没有假期」。跨年计算时，区间覆盖的每一年都必须有该地区的数据。
+工作日工具用 `YYYY-MM-DD`；从起始年到结果年，每一年都必须有已核对的数据，否则报错，不按普通工作日估算。
+
+时区用 `Asia/Shanghai`、`America/New_York` 等 IANA 名称，不代表适用哪套假期。比如上海的 `2026-07-15T08:30` 在洛杉矶是 `2026-07-14T17:30`（前一天）。遇到夏令时重复的本地时间，用 `2026-11-01T01:30-04:00` 这样的偏移量消歧；不存在的本地时间会报错。

@@ -36,7 +36,7 @@
     </section>
 
     <section class="guide-section" id="mcp">
-      <h2 data-en="Connect MCP to let AI look up holidays and workdays">接入 MCP，让 AI 查假期和算工作日</h2>
+      <h2 data-en="Connect MCP to look up holidays, count workdays, and convert time zones">接入 MCP，让 AI 查假期、算工作日和换时区</h2>
       <p data-en="MCP is a way for AI clients to call tools. This service is public and read-only. In a client that supports Streamable HTTP, add the URL below as a remote MCP server; no API key or sign-in is required.">MCP 是 AI 客户端调用工具的方式。在支持 Streamable HTTP 的客户端中添加下面的远程地址即可。服务公开、只读，不需要 API Key 或登录。</p>
       <div class="guide-endpoint guide-endpoint--primary">
         <strong data-en="Recommended · Cloudflare Workers">首选 · Cloudflare Workers</strong>
@@ -56,8 +56,13 @@
         <div><dt><code>list_regions</code></dt><dd data-en="List holiday regions, weekend rules, and covered years.">查看地区、周末规则及已收录年份。</dd></div>
         <div><dt><code>get_holidays</code></dt><dd data-en="Look up public holidays and make-up workdays for a region and year.">查询指定地区和年份的法定假期、补班日。</dd></div>
         <div><dt><code>count_workdays</code></dt><dd data-en="Count workdays between two dates, including both endpoints.">计算区间工作日，包含起止两天。</dd></div>
+        <div><dt><code>add_workdays</code></dt><dd data-en="Move forward or backward by workdays, accounting for local weekends, holidays, and make-up days. The start date is not counted.">按当地的周末、假期和调休补班规则，往前或往后推算工作日，不计起始日。</dd></div>
+        <div><dt><code>convert_timezone</code></dt><dd data-en="Convert a local ISO date and time using zone names such as Asia/Shanghai. For a repeated time, supply the matching UTC offset; nonexistent times return an error.">用 Asia/Shanghai 等时区名换算带日期的 ISO 当地时间。遇到夏令时重复时段，须提供与来源时区匹配的 UTC 偏移量；不存在的时间会报错。</dd></div>
+        <div><dt><code>get_local_time</code></dt><dd data-en="See the current local time in up to five time zones at the same instant.">一次看最多五个时区同一时刻的当地时间。</dd></div>
+        <div><dt><code>suggest_leave_plan</code></dt><dd data-en="Find the longest break that includes a public holiday without exceeding your leave budget.">在请假天数预算内，找含法定假期的最长连休方案。</dd></div>
+        <div><dt><code>find_meeting_windows</code></dt><dd data-en="Find overlapping work hours on workdays for two to four people over up to seven days. It does not check personal availability or book meetings.">在最多七天内找两到四人在工作日的共同办公时间。不查询个人忙闲，也不会预约会议。</dd></div>
       </dl>
-      <p class="guide-note" data-en="Try asking: “How many workdays are there for Saudi financial institutions from September 24 to 27, 2026?” The result is 2. Missing years return an error rather than an estimate. Lunar almanac and leave planning are only on the website.">接入后可以试问：「沙特金融机构从 2026 年 9 月 24 日到 27 日有几个工作日？」答案是 2 个。未收录的年份会明确报错，不估算；农历宜忌和拼假攻略请在网页上使用。</p>
+      <p class="guide-note" data-en="Try asking: “How many workdays are there for Saudi financial institutions from September 24 to 27, 2026?” The result is 2. The holiday-based tools return an error for missing years rather than an estimate. The lunar almanac is only on the website.">接入后可以试问：「沙特金融机构从 2026 年 9 月 24 日到 27 日有几个工作日？」答案是 2 个。依赖假期数据的工具遇到未收录的年份会报错，不估算；农历宜忌请在网页上使用。</p>
       <div class="guide-endpoint">
         <strong data-en="Fallback · Render">备用 · Render</strong>
         <code>https://moyu-calendar-mcp.onrender.com/mcp</code>

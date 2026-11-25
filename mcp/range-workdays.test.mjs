@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { test } from 'node:test';
 import { REGIONS } from '../holidays.js';
-import { addDays, countWorkdays } from '../workday.js';
+import { addDays, addWorkdays, countWorkdays } from '../workday.js';
 import { indexSnapshots } from './calendar-tools.mjs';
-import { countSnapshotWorkdays } from './range-workdays.mjs';
+import { addSnapshotWorkdays, countSnapshotWorkdays } from './range-workdays.mjs';
 
 const dataDir = new URL('../data/', import.meta.url);
 
@@ -61,4 +61,25 @@ test('matches the daily reference for every verified year and each contiguous mu
     }
   }
   assert.equal(countSnapshotWorkdays('2025-01-01', '2031-12-31', data.get('FR'), REGIONS.FR.weekendDays), 1762);
+});
+
+test('workday offsets match the day-by-day reference in every region and direction', async () => {
+  const data = await snapshots();
+  for (const [region, store] of data) {
+    const weekend = REGIONS[region].weekendDays;
+    for (const year of store.keys()) {
+      for (const start of [`${year}-04-15`, `${year}-08-15`, `${year}-10-28`]) {
+        for (const n of [-57, -2, -1, 0, 1, 2, 33]) {
+          const end = addWorkdays(start, n, store, weekend);
+          assert.deepEqual(addSnapshotWorkdays(start, n, store, weekend), { end }, `${region} ${start} ${n}`);
+        }
+      }
+    }
+  }
+});
+
+test('workday offsets cannot jump a gap in snapshot coverage in either direction', () => {
+  const store = new Map([[2025, new Map()], [2027, new Map()]]);
+  assert.deepEqual(addSnapshotWorkdays('2025-12-31', 1, store), { missingYear: 2026 });
+  assert.deepEqual(addSnapshotWorkdays('2027-01-01', -1, store), { missingYear: 2026 });
 });

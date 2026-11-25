@@ -42,8 +42,36 @@ test('Worker and Render adapter agree on verified snapshots and the widest cover
     assert.deepEqual(count.structuredContent, (await call(reference, 'count_workdays', longest.args)).structuredContent);
     console.log('Longest verified interval:', JSON.stringify({ ...count.structuredContent, days: longest.days }));
 
+    const newTools = [
+      ['convert_timezone', { datetime: '2026-11-01T01:30-05:00', from_tz: 'America/New_York', to_tz: 'Asia/Kathmandu' }, 'local', '2026-11-01T12:15:00'],
+      ['add_workdays', { region: 'FR', start: '2025-01-01', n: 1762 }, 'end', '2031-12-31'],
+      ['suggest_leave_plan', { region: 'FR', start: '2026-05-11', end: '2026-05-17', max_leave_days: 1 }, 'plan', {
+        start: '2026-05-14', end: '2026-05-17', totalDays: 4, leaveDates: ['2026-05-15'], holidays: [{ date: '2026-05-14', name: '耶稣升天节' }],
+      }],
+    ];
+    for (const [name, args, key, expected] of newTools) {
+      const live = await call(worker, name, args);
+      const node = await call(reference, name, args);
+      assert.equal(live.isError ?? false, false, name);
+      assert.deepEqual(live.structuredContent[key], expected, name);
+      assert.deepEqual(live.structuredContent, node.structuredContent, name);
+    }
+    console.log('Verified new MCP tools:', newTools.map(([name]) => name).join(', '));
+
     const sa = await call(worker, 'count_workdays', { region: 'SA', start: '2026-09-24', end: '2026-09-27' });
     assert.equal(sa.structuredContent.workdays, 2);
+    const clock = await call(worker, 'get_local_time', { time_zones: ['UTC', 'Asia/Kathmandu'] });
+    assert.equal(clock.isError ?? false, false);
+    assert.equal(clock.structuredContent.times[1].offset, '+05:45');
+    assert.ok(Math.abs(Date.now() - Date.parse(clock.structuredContent.utc)) < 60_000);
+    const meetingArgs = { start: '2026-09-23', end: '2026-09-28', participants: [
+      { region: 'SA', time_zone: 'Asia/Riyadh' }, { region: 'SG', time_zone: 'Asia/Singapore' },
+    ] };
+    const meeting = await call(worker, 'find_meeting_windows', meetingArgs);
+    assert.equal(meeting.isError ?? false, false);
+    assert.deepEqual(meeting.structuredContent.windows.map(w => w.start_utc), ['2026-09-24T06:00:00Z', '2026-09-28T06:00:00Z']);
+    assert.deepEqual(meeting.structuredContent, (await call(reference, 'find_meeting_windows', meetingArgs)).structuredContent);
+    console.log('Verified clock and meeting windows in the Worker runtime.');
     let verified = 0;
     for (const { id: region, years } of regions) {
       for (const year of years) {
