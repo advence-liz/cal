@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Validate official US/SG holiday schedules before changing the bundled data.
+"""Validate official international holiday schedules before changing the bundled data.
 
 Dry run by default. Only --apply writes, and then only after every check for
 that region passes. --input-dir replays downloaded sources without networking.
 """
 import argparse
 from collections import Counter, defaultdict
+import csv
 from datetime import date, timedelta
 from html.parser import HTMLParser
 import json
@@ -18,6 +19,34 @@ BASE = Path(__file__).resolve().parents[1]
 OPM = 'https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/holidays.ics'
 MOM = 'https://www.mom.gov.sg/employment-practices/public-holidays'
 MOM_ICS = 'https://www.mom.gov.sg/-/media/mom/documents/employment-practices/public-holidays/public-holidays-sg-{}.ics'
+JP_CSV = 'https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv'
+GB_JSON = 'https://www.gov.uk/bank-holidays.json'
+FR_JSON = 'https://calendrier.api.gouv.fr/jours-feries/metropole.json'
+ZA_PAGE = 'https://www.gov.za/about-sa/public-holidays'
+FR_NAMES = {
+    '1er janvier': '元旦', 'Lundi de Pâques': '复活节星期一', '1er mai': '劳动节',
+    '8 mai': '二战胜利日', 'Ascension': '耶稣升天节', 'Lundi de Pentecôte': '圣灵降临节星期一',
+    '14 juillet': '法国国庆日', 'Assomption': '圣母升天节', 'Toussaint': '诸圣节',
+    '11 novembre': '停战纪念日', 'Jour de Noël': '圣诞节',
+}
+ZA_NAMES = {
+    "New Year's Day": '元旦', 'Human Rights Day': '人权日', 'Good Friday': '耶稣受难日',
+    'Family Day': '家庭日', 'Freedom Day': '自由日', "Workers' Day": '劳动节', 'Youth Day': '青年日',
+    "National Women's Day": '全国妇女节', 'Heritage Day': '遗产日', 'Day of Reconciliation': '和解日',
+    'Christmas Day': '圣诞节', 'Day of Goodwill': '善意日',
+}
+JP_NAMES = {
+    '元日': '元旦', '成人の日': '成人节', '建国記念の日': '建国纪念日', '天皇誕生日': '天皇诞辰',
+    '春分の日': '春分日', '昭和の日': '昭和日', '憲法記念日': '宪法纪念日', 'みどりの日': '绿之日',
+    'こどもの日': '儿童节', '海の日': '海之日', '山の日': '山之日', '敬老の日': '敬老日',
+    '秋分の日': '秋分日', 'スポーツの日': '体育日', '文化の日': '文化日', '勤労感謝の日': '劳动感谢日',
+}
+GB_NAMES = {
+    "New Year's Day": '元旦', 'Good Friday': '耶稣受难日', 'Easter Monday': '复活节星期一',
+    'Early May bank holiday': '五月初银行假日', 'Spring bank holiday': '春季银行假日',
+    'Summer bank holiday': '夏季银行假日', 'Christmas Day': '圣诞节', 'Boxing Day': '节礼日',
+}
+GB_FIXED = {'元旦': (1, 1), '圣诞节': (12, 25), '节礼日': (12, 26)}
 US_NAMES = {
     "New Year's Day": '元旦', 'Birthday of Martin Luther King, Jr.': '马丁·路德·金纪念日',
     "Washington's Birthday": '华盛顿诞辰', 'Memorial Day': '阵亡将士纪念日',
@@ -231,6 +260,155 @@ def reconcile_sg(entries, ics, year):
     return rows(entries)
 
 
+def jp_years(text, first_year):
+    reader = csv.reader(text.splitlines(), strict=True)
+    if next(reader, None) != ['国民の祝日・休日月日', '国民の祝日・休日名称']:
+        raise MergeError('Unexpected Cabinet Office CSV header')
+    years = defaultdict(dict)
+    for raw in reader:
+        if len(raw) != 2:
+            raise MergeError('Unexpected Cabinet Office CSV row')
+        raw_day, name = raw
+        day = date(*map(int, raw_day.split('/')))
+        if day.year < first_year:
+            continue
+        if day in years[day.year]:
+            raise MergeError(f'Duplicate Japanese holiday date: {day}')
+        years[day.year][day] = None if name == '休日' else translated(JP_NAMES, name)
+
+    result = {}
+    one_day = timedelta(days=1)
+    for year, entries in sorted(years.items()):
+        named = {day: name for day, name in entries.items() if name is not None}
+        if Counter(named.values()) != Counter(JP_NAMES.values()):
+            raise MergeError(f'Incomplete Cabinet Office schedule for {year}')
+        substitutions = {}
+        for day in named:
+            if day.weekday() != 6:
+                continue
+            replacement = day + one_day
+            while replacement in named:
+                replacement += one_day
+            substitutions[replacement] = day
+        bridges = {day + one_day for day in named if day + one_day not in named and day + 2 * one_day in named}
+        extra = entries.keys() - named.keys()
+        if extra != substitutions.keys() | bridges:
+            raise MergeError(f'Unexpected Cabinet Office substitute or bridge holiday dates for {year}')
+        result[str(year)] = rows([(day, name, None) for day, name in named.items()] + [
+            (day, named[substitutions[day]], substitutions[day]) if day in substitutions else (day, '国民休息日', None)
+            for day in extra
+        ])
+    return result
+
+
+def gb_years(feed, first_year):
+    division = feed.get('england-and-wales')
+    if not isinstance(division, dict) or division.get('division') != 'england-and-wales' or not isinstance(division.get('events'), list):
+        raise MergeError('England and Wales subdivision missing from GOV.UK feed')
+    years = defaultdict(list)
+    for event in division['events']:
+        day = date.fromisoformat(event['date'])
+        if day.year < first_year:
+            continue
+        name = translated(GB_NAMES, clean(event['title']))
+        note = clean(event['notes'])
+        fixed = date(day.year, *GB_FIXED[name]) if name in GB_FIXED else None
+        substitute = note == 'Substitute day'
+        if (day.weekday() >= 5 or note not in ('', 'Substitute day')
+            or (substitute and (fixed is None or fixed.weekday() < 5 or not 1 <= (day - fixed).days <= 3))
+            or (not substitute and fixed is not None and day != fixed)):
+            raise MergeError(f'Unexpected GOV.UK holiday date or note: {day}, {note!r}')
+        years[day.year].append((day, name, fixed if substitute else None))
+    for year, entries in years.items():
+        if Counter(name for _, name, _ in entries) != Counter(GB_NAMES.values()):
+            raise MergeError(f'Incomplete England and Wales schedule for {year}')
+    return {str(year): rows(entries) for year, entries in sorted(years.items())}
+
+
+def fr_years(feed, first_year):
+    if not isinstance(feed, dict):
+        raise MergeError('Expected a metropolitan France date-to-name mapping')
+    years = defaultdict(list)
+    for raw_day, official in feed.items():
+        day = date.fromisoformat(raw_day)
+        if day.year >= first_year:
+            years[day.year].append((day, translated(FR_NAMES, official), None))
+    expected = Counter(FR_NAMES.values())
+    for year, entries in years.items():
+        if Counter(name for _, name, _ in entries) != expected:
+            raise MergeError(f'Incomplete metropolitan France schedule for {year}')
+    return {str(year): rows(entries) for year, entries in sorted(years.items())}
+
+
+class ZAYearSections(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.sections = {}
+        self.year = self.capture = None
+        self.text = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'h2' or (tag == 'p' and self.year is not None):
+            self.capture = tag
+            self.text = []
+        elif tag == 'br' and self.capture == 'p':
+            self.text.append('\n')
+
+    def handle_data(self, text):
+        if self.capture:
+            self.text.append(text)
+
+    def handle_endtag(self, tag):
+        if tag != self.capture:
+            return
+        text = ''.join(self.text)
+        if tag == 'h2':
+            label = clean(text)
+            self.year = label if re.fullmatch(r'20\d{2}', label) else None
+            if self.year is not None:
+                if self.year in self.sections:
+                    raise MergeError(f'Duplicate South African year: {self.year}')
+                self.sections[self.year] = []
+        else:
+            self.sections[self.year].extend(clean(line) for line in text.splitlines())
+        self.capture = None
+
+
+def za_years(html):
+    parser = ZAYearSections()
+    parser.feed(html)
+    parser.close()
+    if not parser.sections:
+        raise MergeError('South African government holiday sections missing')
+    result = {}
+    one_day = timedelta(days=1)
+    expected = Counter(ZA_NAMES.values())
+    for year, lines in sorted(parser.sections.items()):
+        base, announced = [], []
+        for line in lines:
+            if not line or line.startswith('*'):
+                continue
+            raw_date, sep, official = line.partition(':')
+            if not sep:
+                raise MergeError(f'Unrecognized South African holiday row: {line!r}')
+            day = mom_date(f'{raw_date.strip()} {year}')
+            official = clean(official).rstrip(' *')
+            substitute = re.fullmatch(r'Public holiday (.+) observed', official, re.I)
+            if substitute:
+                announced.append((day, translated(ZA_NAMES, substitute[1])))
+            else:
+                base.append((day, translated(ZA_NAMES, clean(official)), None))
+        if Counter(name for _, name, _ in base) != expected:
+            raise MergeError(f'Incomplete South African holiday schedule for {year}')
+        # The Act makes the following Monday a public holiday, including when
+        # the annual list omits the separate observed row (e.g. Dec 27, 2027).
+        replacements = [(day + one_day, name, day) for day, name, _ in base if day.weekday() == 6]
+        if len(set(announced)) != len(announced) or not set(announced) <= {(day, name) for day, name, _ in replacements}:
+            raise MergeError(f'Unexpected South African substitute holiday for {year}')
+        result[year] = rows(base + replacements)
+    return result
+
+
 def merge_years(existing, fresh, current_year):
     if str(current_year) not in fresh:
         raise MergeError(f'Current year {current_year} is missing from the confirmed upstream schedules')
@@ -247,7 +425,7 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def load_source(url, fixture, input_dir):
+def load_source(url, fixture, input_dir, encoding='utf-8-sig'):
     limit = 1_000_000
     if input_dir is not None:
         with (input_dir / fixture).open('rb') as stream:
@@ -258,7 +436,7 @@ def load_source(url, fixture, input_dir):
             raw = response.read(limit + 1)
     if not raw or len(raw) > limit:
         raise MergeError(f'Empty or oversized upstream source: {fixture}')
-    return raw.decode('utf-8-sig')
+    return raw.decode(encoding)
 
 
 def render_snapshot(previous, years):
@@ -273,7 +451,7 @@ def render_snapshot(previous, years):
 
 def main():
     args = argparse.ArgumentParser(description=__doc__)
-    args.add_argument('region', choices=['us', 'sg'])
+    args.add_argument('region', choices=['us', 'sg', 'jp', 'gb', 'fr', 'za'])
     args.add_argument('--apply', action='store_true')
     args.add_argument('--input-dir', type=Path)
     options = args.parse_args()
@@ -288,6 +466,17 @@ def main():
             earliest = min(d.year for d, name in events if name != 'Inauguration Day')
             start = max(earliest, min(map(int, before['years'])))
             fresh = us_years(raw, start)
+        elif options.region == 'jp':
+            raw = load_source(JP_CSV, 'jp.csv', options.input_dir, encoding='cp932')
+            fresh = jp_years(raw, 2025)
+        elif options.region == 'gb':
+            raw = load_source(GB_JSON, 'gb.json', options.input_dir)
+            fresh = gb_years(json.loads(raw), 2025)
+        elif options.region == 'fr':
+            raw = load_source(FR_JSON, 'fr.json', options.input_dir)
+            fresh = fr_years(json.loads(raw), 2025)
+        elif options.region == 'za':
+            fresh = za_years(load_source(ZA_PAGE, 'za.html', options.input_dir))
         else:
             page = load_source(MOM, 'mom.html', options.input_dir)
             seasons = parse_mom(page)

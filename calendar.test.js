@@ -1,4 +1,4 @@
-import { getMonthCells, monthTitle, describeDay, describeDayText, describeDayFacts, suitsActivity, findNextSuitableDate, ACTIVITIES } from './calendar.js';
+import { getMonthCells, monthTitle, renderMonth, describeDay, describeDayText, describeDayFacts, suitsActivity, findNextSuitableDate, ACTIVITIES } from './calendar.js';
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
 import { formatDate } from './workday.js';
 import { makeRunner } from './test-harness.js';
@@ -129,6 +129,33 @@ export function runTests() {
     for (const a of ACTIVITIES) {
       eq(typeof ACTIVITY_TERM_INFO[a.term], 'string');
     }
+  });
+
+  check('21. 海外默认只显示所选地区的假期，月历和日期详情不插入农历', () => {
+    const options = { showLunar: false, showChineseFestivals: false };
+    const store = new Map([[2026, new Map([['2026-11-26', { name: '感恩节', isOffDay: true }]])]]);
+    const grid = document.createElement('div');
+    renderMonth(2026, 11, grid, store, '', '', '', null, options);
+    const ordinaryDay = grid.querySelector('[data-date="2026-11-09"]');
+    eq(ordinaryDay.querySelector('.tag'), null);
+    eq(ordinaryDay.getAttribute('aria-label'), '2026-11-09 工作日');
+    eq(grid.querySelector('[data-date="2026-11-26"].day--holiday .tag').textContent, '感恩节');
+    const info = describeDay('2026-11-22', store, options);
+    eq(describeDayText(info), ['周末']);
+    eq(describeDayFacts(info), []);
+  });
+
+  check('22. 海外主动展开黄历时恢复农历日期和节气，但不加中国节日', () => {
+    const options = { showLunar: true, showChineseFestivals: false };
+    const store = new Map();
+    const info = describeDay('2026-09-25', store, options);
+    eq(describeDayText(info).some((line) => line.startsWith('农历')), true);
+    eq(describeDayText(info).some((line) => line.includes('中秋节')), false);
+    eq(describeDayFacts(info).some((f) => f.term === '中秋节'), false);
+    const chinaNationalDay = describeDay('2026-10-01', store, options);
+    eq(describeDayText(chinaNationalDay).some((line) => line.includes('国庆节')), false);
+    const solarTerm = describeDay('2026-11-22', store, options);
+    eq(describeDayText(solarTerm).includes('节气：小雪'), true);
   });
 
   return results;

@@ -1,4 +1,4 @@
-name: Check US and Singapore holiday data
+name: Check international holiday data
 
 on:
   schedule:
@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region: [us, sg]
+        region: [us, sg, jp, gb, fr, za]
     env:
       REGION: ${{ matrix.region }}
       BASE_BRANCH: ${{ github.event.repository.default_branch }}
@@ -98,7 +98,7 @@ jobs:
           body="$RUNNER_TEMP/holiday-pr.md"
           {
             printf '%s\n\n' 'Official holiday data changed. Parser checks and browser tests passed. Review the date changes before merging.'
-            grep -E '^(US|SG) confirmed upstream:' "$RUNNER_TEMP/holiday-vendor.log"
+            grep -E '^(US|SG|JP|GB|FR|ZA) confirmed upstream:' "$RUNNER_TEMP/holiday-vendor.log"
             printf '\n%s\n' '🤖 Generated with [Claude Code](https://claude.com/claude-code)'
           } > "$body"
           if [[ -n "$pr" ]]; then

@@ -17,7 +17,7 @@ import {
 } from './workday.js';
 import { renderMonth, monthTitle, describeDay, describeDayText, describeDayFacts, findNextSuitableDate, ACTIVITIES } from './calendar.js';
 import { ACTIVITY_TERM_INFO } from './almanac-info.js';
-import { CLOCK_ZONES, regionClock } from './region-clock.js';
+import { AUTO_CLOCK_ZONE, CLOCK_ZONES, clockZoneFor, regionClock } from './region-clock.js';
 import { LANGUAGE_KEY, activityName, dateLabel, daysLabel, english, getLanguage, holidayLabel, setLanguage, t, translateStatic } from './i18n.js';
 import { coveredDays, DEFAULT_HORIZON_DAYS, suggestHolidayOpportunities, yearsInRange, groupDateRanges } from './bridge-plan.js';
 
@@ -51,14 +51,17 @@ function scrollBehavior() {
 }
 
 const REGION_KEY = 'cal:holiday-region';
+const CLOCK_ZONE_KEY = 'cal:clock-zone';
 const state = {
   region: DEFAULT_REGION,
+  clockZone: AUTO_CLOCK_ZONE,
   regionVersion: 0,
   monthRequest: 0,
   year: 0,
   month: 0,
   today: '',
   selected: '',
+  showAlmanac: true,
   activityTerm: '',
   activityLabel: '',
   leaveDates: new Set(),
@@ -154,8 +157,12 @@ function estimateNote(start, end, store) {
   return '';
 }
 
+function dayViewOptions() {
+  return { showLunar: state.showAlmanac, showChineseFestivals: state.region === DEFAULT_REGION };
+}
+
 function renderCalendar() {
-  renderMonth(state.year, state.month, $('calGrid'), currentStore(), state.today, state.selected, state.activityTerm, state.leaveDates);
+  renderMonth(state.year, state.month, $('calGrid'), currentStore(), state.today, state.selected, state.activityTerm, state.leaveDates, dayViewOptions());
 }
 
 // --- URL 深链接：#YYYY-MM 或 #YYYY-MM-DD（含选中日）---
@@ -244,7 +251,7 @@ function renderWorkdayRemaining(store) {
 
 // --- 日期详情面板（tap-to-view，弥补移动端没有 title hover 的问题）---
 function showDayDetail(dateStr) {
-  const info = describeDay(dateStr, currentStore());
+  const info = describeDay(dateStr, currentStore(), dayViewOptions());
   const d = parseDate(dateStr);
   $('dayDetailDate').textContent =
     t(`${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${WEEKDAY_CN[d.getDay()]}`,
@@ -550,6 +557,7 @@ function updateAlmanac(expanded) {
   const shelf = $('almanacShelf');
   const toggle = $('almanacToggle');
   const open = atTop || expanded;
+  state.showAlmanac = open;
   if (atTop) $('calGrid').before(panel);
   else shelf.append(panel);
   shelf.hidden = atTop;
@@ -578,8 +586,9 @@ function renderActivityOptions() {
 // 点一个活动高亮宜办日期，再点一次取消。
 function bindActivityFilters() {
   $('almanacToggle').addEventListener('click', () => {
-    updateAlmanac($('activityPanel').hidden);
+    updateAlmanac(!state.showAlmanac);
     renderCalendar();
+    if (state.selected && !$('dayDetail').hidden) showDayDetail(state.selected);
   });
   $('activityFilters').addEventListener('click', (e) => {
     const btn = e.target.closest('.activity-chip');
@@ -697,7 +706,7 @@ function bindDayPopover() {
   function hide() { popover.hidden = true; }
 
   function dayFactsHtml(dateStr) {
-    const facts = describeDayFacts(describeDay(dateStr, currentStore()));
+    const facts = describeDayFacts(describeDay(dateStr, currentStore(), dayViewOptions()));
     return facts.map((f) => `<p class="day-popover__fact"><strong>${f.term}</strong>：${f.blurb}</p>`).join('');
   }
 
@@ -791,24 +800,52 @@ function bindHashChange() {
 }
 
 function renderRegionClock() {
-  const clock = $('regionClock');
+  const clock = $('clockPicker');
+  const zone = clockZoneFor(state.region, state.clockZone);
   let value;
   try {
-    value = regionClock(state.region);
+    value = regionClock(zone);
   } catch {
     // Older WebViews may lack offset formatting. Keep the calendar usable.
     clock.hidden = true;
     return;
   }
-  $('regionClockCity').textContent = t(...CLOCK_ZONES[state.region].city);
+  const city = t(...CLOCK_ZONES[zone].city);
+  $('regionClockCity').textContent = city;
   const time = $('regionClockTime');
   time.textContent = value.time;
   time.dateTime = value.time;
   $('regionClockOffset').textContent = value.offset;
+  $('clockTrigger').setAttribute('aria-label', t(`时钟时区：${city} ${value.time} ${value.offset}`, `Clock time zone: ${city} ${value.time} ${value.offset}`));
   clock.hidden = false;
 }
 
+function updateClockSelection() {
+  for (const option of $('clockPicker').querySelectorAll('[data-zone]')) {
+    option.setAttribute('aria-pressed', String(option.dataset.zone === state.clockZone));
+  }
+}
+
+function renderClockOptions() {
+  const buttons = Object.entries(CLOCK_ZONES).map(([zone, { city }]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.zone = zone;
+    button.textContent = t(...city);
+    return button;
+  });
+  $('clockOptions').replaceChildren(...buttons);
+  updateClockSelection();
+}
+
 function bindRegionClock() {
+  bindHeaderPicker('clockPicker', 'clockTrigger', 'zone', (zone) => {
+    if (zone !== AUTO_CLOCK_ZONE && !Object.hasOwn(CLOCK_ZONES, zone)) return;
+    state.clockZone = zone;
+    try { localStorage.setItem(CLOCK_ZONE_KEY, zone); } catch { /* optional preference */ }
+    updateClockSelection();
+    renderRegionClock();
+  });
   function tick() {
     if (!document.hidden) renderRegionClock();
     setTimeout(tick, 60000 - Date.now() % 60000);
@@ -830,21 +867,28 @@ function updateRegionChrome() {
     }
   }
   $('holidaySource').href = source;
-  const sourceEn = { CN: label, US: 'U.S. Office of Personnel Management (OPM)', SG: 'Singapore Ministry of Manpower (MOM)' };
+  const sourceEn = {
+    CN: label, US: 'U.S. Office of Personnel Management (OPM)', SG: 'Singapore Ministry of Manpower (MOM)',
+    JP: 'Japan Cabinet Office', GB: 'GOV.UK', FR: 'French government public holiday data', ZA: 'South African Government',
+  };
   $('holidaySource').textContent = t(label, sourceEn[state.region]);
   const scopeEn = {
     CN: 'State Council holiday schedule, including make-up workdays.',
     US: 'Federal holidays observed on a Monday–Friday schedule. Excludes state and employer-specific holidays.',
     SG: 'Monday–Friday schedule with Sunday as the rest day. Saturday holidays do not automatically move to Monday.',
+    JP: 'Japan’s national public holidays, including substitute holidays and weekdays between two national holidays.',
+    GB: 'Bank holidays for England and Wales only, including substitute days; excludes Scotland and Northern Ireland.',
+    FR: 'General metropolitan France public holidays; excludes regional and overseas additions. Check your employer’s schedule.',
+    ZA: 'Nationwide public holidays. When a holiday falls on Sunday, the following Monday is also a public holiday.',
   };
   $('holidayScope').textContent = t(scope, scopeEn[state.region]);
   $('makeupLegend').hidden = state.region !== DEFAULT_REGION;
   renderRegionClock();
 }
 
-function bindRegion(refreshOverview) {
-  const picker = $('holidayRegion');
-  const trigger = $('regionTrigger');
+function bindHeaderPicker(pickerId, triggerId, key, select) {
+  const picker = $(pickerId);
+  const trigger = $(triggerId);
   const closeAndFocus = () => {
     picker.open = false;
     trigger.focus({ preventScroll: true });
@@ -860,11 +904,16 @@ function bindRegion(refreshOverview) {
     event.preventDefault();
     closeAndFocus();
   });
-  picker.addEventListener('click', async (event) => {
-    const option = event.target.closest('button[data-region]');
+  picker.addEventListener('click', (event) => {
+    const option = event.target.closest(`button[data-${key}]`);
     if (!option) return;
-    const region = option.dataset.region;
     closeAndFocus();
+    select(option.dataset[key]);
+  });
+}
+
+function bindRegion(refreshOverview) {
+  bindHeaderPicker('holidayRegion', 'regionTrigger', 'region', async (region) => {
     if (!Object.hasOwn(REGIONS, region) || region === state.region) return;
     state.region = region;
     state.regionVersion++;
@@ -897,12 +946,13 @@ function refreshFormResults() {
 }
 
 function renderLanguageChrome() {
-  const expanded = !$('activityPanel').hidden;
+  const expanded = state.showAlmanac;
   translateStatic(document);
   const button = $('languageToggle');
   button.textContent = t('English', '中文');
   button.lang = t('en', 'zh-CN');
   $('almanacTranslationNote').hidden = !english();
+  renderClockOptions();
   updateRegionChrome();
   renderActivityOptions();
   updateAlmanac(expanded);
@@ -926,6 +976,8 @@ async function init() {
     setLanguage(localStorage.getItem(LANGUAGE_KEY));
     const saved = localStorage.getItem(REGION_KEY);
     if (Object.hasOwn(REGIONS, saved)) state.region = saved;
+    const savedZone = localStorage.getItem(CLOCK_ZONE_KEY);
+    if (Object.hasOwn(CLOCK_ZONES, savedZone)) state.clockZone = savedZone;
   } catch { /* use the default region and language */ }
   const today = todayStr();
   state.today = today;

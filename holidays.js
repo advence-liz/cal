@@ -1,11 +1,15 @@
 // Holiday schedules expose the same Map<year, Map<date, day>> for each region.
-// CN keeps its existing local/CDN/cache chain; US and SG use bundled snapshots.
+// CN keeps its existing local/CDN/cache chain; other regions use bundled snapshots.
 
 export const DEFAULT_REGION = 'CN';
 export const REGIONS = {
   CN: { source: 'https://github.com/NateScarlet/holiday-cn', label: 'NateScarlet/holiday-cn', scope: '国务院办公厅口径，含调休补班' },
   US: { source: 'https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/', label: '美国人事管理局（OPM）', scope: '全国联邦假期，按周一至周五排班的实际休假日；不含州假，私企以雇主安排为准', file: 'data/holidays-us.json' },
   SG: { source: 'https://www.mom.gov.sg/employment-practices/public-holidays', label: '新加坡人力部（MOM）', scope: '按周一至周五上班、周日为休息日计算；周六假日不自动补到周一', file: 'data/holidays-sg.json' },
+  JP: { source: 'https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html', label: '日本内阁府', scope: '日本全国公众假期，含补休及夹在两个法定节日之间的国民休息日', file: 'data/holidays-jp.json' },
+  GB: { source: 'https://www.gov.uk/bank-holidays', label: 'GOV.UK', scope: '仅英格兰和威尔士的银行假日，含补休；不含苏格兰和北爱尔兰', file: 'data/holidays-gb.json' },
+  FR: { source: 'https://calendrier.api.gouv.fr/jours-feries/metropole.json', label: '法国政府公共假日数据', scope: '法国本土通用假日，不含地方和海外增补；实际排班以雇主安排为准', file: 'data/holidays-fr.json' },
+  ZA: { source: 'https://www.gov.za/about-sa/public-holidays', label: '南非政府公共假日', scope: '全国公共假日，周日遇假时次日周一也放假', file: 'data/holidays-za.json' },
 };
 
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master';

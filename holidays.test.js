@@ -88,11 +88,33 @@ export async function runTests() {
     eq(bridgePlan.coveredDays('2028-01-01', 400, through2027), 0);
   });
 
-  await checkAsync('10. 英文界面翻译三个地区已收录的假日，不修改原始数据', async () => {
+  await checkAsync('日本与英格兰及威尔士独立加载，补休参与工作日计算', async () => {
+    const results = await Promise.all(['JP', 'GB'].map((region) => loadYears([2027], region)));
+    eq(results.map(([r]) => r.source), ['local', 'local']);
+    const jp = getDataStore('JP');
+    const gb = getDataStore('GB');
+    eq(jp.get(2027).get('2027-03-22').observedFor, '2027-03-21');
+    eq(jp.get(2026).get('2026-09-22').name, '国民休息日');
+    eq(gb.get(2027).get('2027-12-28').observedFor, '2027-12-26');
+    eq(addWorkdays('2027-12-24', 1, gb), '2027-12-29');
+  });
+
+  await checkAsync('法国与南非按各自口径处理周日假期', async () => {
+    const results = await Promise.all(['FR', 'ZA'].map((region) => loadYears([2026, 2027], region)));
+    eq(results.map((years) => years.map((r) => r.source)), [['local', 'local'], ['local', 'local']]);
+    const fr = getDataStore('FR');
+    const za = getDataStore('ZA');
+    eq(fr.get(2026).get('2026-11-01').name, '诸圣节');
+    eq(addWorkdays('2026-10-30', 1, fr), '2026-11-02');
+    eq(za.get(2027).get('2027-12-27').observedFor, '2027-12-26');
+    eq(addWorkdays('2027-12-24', 1, za), '2027-12-28');
+  });
+
+  await checkAsync('10. 英文界面翻译所有已收录的假日，不修改原始数据', async () => {
     const saved = getLanguage();
     try {
       setLanguage('en');
-      for (const region of ['CN', 'US', 'SG']) {
+      for (const region of ['CN', 'US', 'SG', 'JP', 'GB', 'FR', 'ZA']) {
         await loadYears([2025, 2026, 2027], region);
         for (const yearStore of getDataStore(region).values()) {
           for (const { name } of yearStore.values()) eq(/[㐀-鿿]/u.test(holidayLabel(name)), false);

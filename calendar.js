@@ -52,7 +52,7 @@ export function getMonthCells(year, month) {
 
 // Pure day lookup: holiday meta + weekday + lunar info for one date.
 // Shared by the grid cell (tooltip/tag) and the tap-to-view detail panel.
-export function describeDay(dateStr, dataStore) {
+export function describeDay(dateStr, dataStore, { showLunar = true, showChineseFestivals = true } = {}) {
   const dateObj = parseDate(dateStr);
   const year = dateObj.getFullYear();
   const yearMap = dataStore.get(year);
@@ -62,10 +62,14 @@ export function describeDay(dateStr, dataStore) {
   // Lunar year range is bounded (1900-2100 in vendor/lunar.js); dates near
   // that edge should degrade to solar-only rather than throw.
   let lunarInfo = null;
-  try {
-    lunarInfo = getDayInfo(dateStr);
-  } catch {
-    lunarInfo = null;
+  if (showLunar) {
+    try {
+      lunarInfo = getDayInfo(dateStr);
+      // This library supplies Chinese cultural festivals, not local holidays.
+      if (!showChineseFestivals) lunarInfo = { ...lunarInfo, festival: '', solarFestival: '' };
+    } catch {
+      lunarInfo = null;
+    }
   }
 
   return { dateStr, dow, meta, lunarInfo };
@@ -130,20 +134,20 @@ export function findNextSuitableDate(fromDateStr, term, dataStore, maxDays = 730
   return null;
 }
 
-export function renderMonth(year, month, container, dataStore, todayStr, selectedStr, activityTerm = '', leaveDates = null) {
+export function renderMonth(year, month, container, dataStore, todayStr, selectedStr, activityTerm = '', leaveDates = null, dayOptions) {
   // month is 1-12
   // Clear existing day cells, keep header (7 .cal-head)
   const heads = container.querySelectorAll('.cal-head');
   container.replaceChildren(...heads);
 
   for (const { date, otherMonth } of getMonthCells(year, month)) {
-    container.appendChild(makeCell(date, otherMonth, dataStore, todayStr, selectedStr, activityTerm, leaveDates));
+    container.appendChild(makeCell(date, otherMonth, dataStore, todayStr, selectedStr, activityTerm, leaveDates, dayOptions));
   }
 }
 
-function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activityTerm, leaveDates) {
+function makeCell(dateObj, otherMonth, dataStore, todayStr, selectedStr, activityTerm, leaveDates, dayOptions) {
   const dateStr = formatDate(dateObj);
-  const info = describeDay(dateStr, dataStore);
+  const info = describeDay(dateStr, dataStore, dayOptions);
   const { meta, dow, lunarInfo } = info;
 
   const cell = document.createElement('div');

@@ -15,6 +15,12 @@ const holidayEn = {
   '马丁·路德·金纪念日': 'Martin Luther King Jr. Day', 华盛顿诞辰: 'Washington’s Birthday', 阵亡将士纪念日: 'Memorial Day', 六月节: 'Juneteenth',
   美国独立日: 'Independence Day', 美国劳动节: 'Labor Day', 哥伦布日: 'Columbus Day', 退伍军人节: 'Veterans Day', 感恩节: 'Thanksgiving', 圣诞节: 'Christmas Day',
   开斋节: 'Hari Raya Puasa', 耶稣受难日: 'Good Friday', 投票日: 'Polling Day', 卫塞节: 'Vesak Day', 哈芝节: 'Hari Raya Haji', 新加坡国庆日: 'National Day', 屠妖节: 'Deepavali',
+  成人节: 'Coming of Age Day', 建国纪念日: 'National Foundation Day', 天皇诞辰: 'Emperor’s Birthday', 春分日: 'Vernal Equinox Day', 昭和日: 'Shōwa Day',
+  宪法纪念日: 'Constitution Memorial Day', 绿之日: 'Greenery Day', 儿童节: 'Children’s Day', 海之日: 'Marine Day', 山之日: 'Mountain Day', 敬老日: 'Respect for the Aged Day',
+  秋分日: 'Autumnal Equinox Day', 体育日: 'Sports Day', 文化日: 'Culture Day', 劳动感谢日: 'Labour Thanksgiving Day', 国民休息日: 'Citizens’ Holiday',
+  复活节星期一: 'Easter Monday', 五月初银行假日: 'Early May Bank Holiday', 春季银行假日: 'Spring Bank Holiday', 夏季银行假日: 'Summer Bank Holiday', 节礼日: 'Boxing Day',
+  二战胜利日: 'Victory in Europe Day', 耶稣升天节: 'Ascension Day', 圣灵降临节星期一: 'Whit Monday', 法国国庆日: 'Bastille Day', 圣母升天节: 'Assumption Day', 诸圣节: 'All Saints’ Day', 停战纪念日: 'Armistice Day',
+  人权日: 'Human Rights Day', 家庭日: 'Family Day', 自由日: 'Freedom Day', 青年日: 'Youth Day', 全国妇女节: 'National Women’s Day', 遗产日: 'Heritage Day', 和解日: 'Day of Reconciliation', 善意日: 'Day of Goodwill',
   除夕: 'Chinese New Year’s Eve', 元宵节: 'Lantern Festival', 龙抬头: 'Dragon Head Festival', 七夕节: 'Qixi Festival', 中元节: 'Ghost Festival', 重阳节: 'Double Ninth Festival', 腊八节: 'Laba Festival', 小年: 'Little New Year',
 };
 export function holidayLabel(name) {
@@ -30,6 +36,9 @@ export const activityName = ({ term, label }) => english() ? activityEn[term] ||
 const staticText = {
   appTitle: ['摸鱼日历', 'Moyu Calendar'], regionTitle: ['假期地区', 'Holiday region'],
   regionCN: ['中国大陆', 'Mainland China'], regionUS: ['美国联邦', 'US Federal'], regionSG: ['新加坡', 'Singapore'],
+  regionJP: ['日本', 'Japan'], regionGB: ['英格兰和威尔士', 'England & Wales'],
+  regionFR: ['法国本土', 'Metropolitan France'], regionZA: ['南非', 'South Africa'],
+  clockTitle: ['时钟时区', 'Clock time zone'], clockAuto: ['跟随假期地区', 'Follow holiday region'],
   today: ['回到今天', 'Today'], todayShort: ['今天', 'Today'],
   weekday1: ['一', 'Mon'], weekday2: ['二', 'Tue'], weekday3: ['三', 'Wed'], weekday4: ['四', 'Thu'], weekday5: ['五', 'Fri'], weekday6: ['六', 'Sat'], weekday0: ['日', 'Sun'],
   holiday: ['法定假', 'Public holiday'], makeup: ['调休补班', 'Make-up workday'], weekend: ['周末', 'Weekend'], suitable: ['宜（筛选中）', 'Suitable (filtered)'],

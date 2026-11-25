@@ -26,27 +26,41 @@
 <body>
   <header class="topbar">
     <div class="topbar-brand">
-      <h1><img src="icon.svg" alt="" class="app-logo" width="24" height="24"><span data-i18n="appTitle">摸鱼日历</span></h1>
-      <details class="region-picker" id="holidayRegion">
-        <summary id="regionTrigger" aria-label="假期地区：中国大陆">
-          <svg class="region-globe" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-            <circle cx="8" cy="8" r="6"/><ellipse cx="8" cy="8" rx="2.6" ry="6"/><path d="M2 8h12"/>
-          </svg>
-          <span id="regionLabel">中国大陆</span>
+      <div class="topbar-brand-row">
+        <h1><img src="icon.svg" alt="" class="app-logo" width="24" height="24"><span data-i18n="appTitle">摸鱼日历</span></h1>
+        <details class="region-picker" id="holidayRegion">
+          <summary id="regionTrigger" aria-label="假期地区：中国大陆">
+            <svg class="region-globe" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+              <circle cx="8" cy="8" r="6"/><ellipse cx="8" cy="8" rx="2.6" ry="6"/><path d="M2 8h12"/>
+            </svg>
+            <span id="regionLabel">中国大陆</span>
+            <svg class="region-chevron" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
+          </summary>
+          <div class="region-menu" role="group" aria-labelledby="regionMenuTitle" aria-describedby="holidayScope">
+            <p id="regionMenuTitle" data-i18n="regionTitle">假期地区</p>
+            <button type="button" data-region="CN" data-i18n="regionCN" aria-pressed="true">中国大陆</button>
+            <button type="button" data-region="US" data-i18n="regionUS" aria-pressed="false">美国联邦</button>
+            <button type="button" data-region="SG" data-i18n="regionSG" aria-pressed="false">新加坡</button>
+            <button type="button" data-region="JP" data-i18n="regionJP" aria-pressed="false">日本</button>
+            <button type="button" data-region="GB" data-i18n="regionGB" aria-pressed="false">英格兰和威尔士</button>
+            <button type="button" data-region="FR" data-i18n="regionFR" aria-pressed="false">法国本土</button>
+            <button type="button" data-region="ZA" data-i18n="regionZA" aria-pressed="false">南非</button>
+            <p class="region-scope" id="holidayScope">国务院办公厅口径，含调休补班</p>
+          </div>
+        </details>
+      </div>
+      <details class="region-picker clock-picker" id="clockPicker" hidden>
+        <summary class="region-clock" id="clockTrigger" aria-label="时钟时区">
+          <span id="regionClockCity"></span> <time id="regionClockTime"></time>
+          <span class="region-clock__offset" id="regionClockOffset"></span>
           <svg class="region-chevron" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.5 3 3 3-3"/></svg>
         </summary>
-        <div class="region-menu" role="group" aria-labelledby="regionMenuTitle" aria-describedby="holidayScope">
-          <p id="regionMenuTitle" data-i18n="regionTitle">假期地区</p>
-          <button type="button" data-region="CN" data-i18n="regionCN" aria-pressed="true">中国大陆</button>
-          <button type="button" data-region="US" data-i18n="regionUS" aria-pressed="false">美国联邦</button>
-          <button type="button" data-region="SG" data-i18n="regionSG" aria-pressed="false">新加坡</button>
-          <p class="region-scope" id="holidayScope">国务院办公厅口径，含调休补班</p>
+        <div class="region-menu clock-menu" role="group" aria-labelledby="clockMenuTitle">
+          <p id="clockMenuTitle" data-i18n="clockTitle">时钟时区</p>
+          <button type="button" data-zone="auto" data-i18n="clockAuto" aria-pressed="true">跟随假期地区</button>
+          <div id="clockOptions"></div>
         </div>
       </details>
-      <p class="region-clock" id="regionClock" hidden>
-        <span id="regionClockCity"></span> <time id="regionClockTime"></time>
-        <span class="region-clock__offset" id="regionClockOffset"></span>
-      </p>
     </div>
     <div class="topbar-right">
       <div class="next-holiday" id="nextHoliday">加载中…</div>

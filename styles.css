@@ -341,15 +341,29 @@ body {
 
 .topbar-brand {
   position: relative;
-  display: grid;
-  grid-template-columns: max-content max-content;
-  align-items: center;
-  gap: 0.12rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 100%;
+  gap: 0.12rem;
 }
-.topbar h1 { white-space: nowrap; }
-.region-clock {
-  grid-column: 1 / -1;
-  margin: 0 0 0 2rem;
+/* Keep the region's position tied to the title, never to the clock below. */
+.topbar-brand-row {
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 0.85rem;
+}
+.topbar h1 { flex: none; white-space: nowrap; }
+#holidayRegion,
+#regionLabel { min-width: 0; }
+#regionLabel { overflow: hidden; text-overflow: ellipsis; }
+.region-picker summary svg { flex: none; }
+.clock-picker { margin-inline-start: 1.7rem; }
+.region-picker .region-clock {
+  min-height: 1.5rem;
+  padding: 0.12rem 0.3rem;
+  border-color: transparent;
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.25;
@@ -435,8 +449,12 @@ body {
   border-top: 1px solid var(--border);
 }
 
+.clock-menu { max-height: min(28rem, calc(100dvh - 6rem)); overflow-y: auto; }
+#clockOptions { margin-top: 0.3rem; border-top: 1px solid var(--border); padding-top: 0.3rem; }
+
 @media (max-width: 480px) {
   .region-picker { position: static; }
+  .region-picker.clock-picker { position: relative; }
 }
 
 .almanac-shelf { margin-top: 0.5rem; }
