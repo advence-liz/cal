@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region: [za]
+        region: [us, sg, jp, gb, fr, za, au, sa]
     env:
       REGION: ${{ matrix.region }}
     steps:
@@ -44,7 +44,7 @@ jobs:
           if not detail:
               detail = next((line for line in reversed(lines) if line.strip()), 'No diagnostic output')
           detail = ''.join(char if char.isprintable() else ' ' for char in detail)[:450]
-          print('::error title=South Africa source check::' + detail.replace('%', '%25'))
+          print('::error title=Official holiday source check::' + detail.replace('%', '%25'))
           PY
             exit 1
           fi
