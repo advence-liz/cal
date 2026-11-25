@@ -1,6 +1,12 @@
 {
   "source": "https://www.gov.za/about-sa/public-holidays",
-  "scope": "Nationwide public holidays for published years; Sunday holidays are also observed the following Monday under the Public Holidays Act.",
+  "scope": "Nationwide public holidays for published years, including separately verified presidential proclamations; Sunday holidays are also observed the following Monday under the Public Holidays Act.",
+  "proclamations": {
+    "2026-11-04": {
+      "name": "投票日",
+      "source": "https://www.gov.za/news/media-statements/president-cyril-ramaphosa-declares-election-day"
+    }
+  },
   "years": {
     "2026": [
       ["2026-01-01", "元旦"],
@@ -13,6 +19,7 @@
       ["2026-08-09", "全国妇女节"],
       ["2026-08-10", "全国妇女节", "2026-08-09"],
       ["2026-09-24", "遗产日"],
+      ["2026-11-04", "投票日"],
       ["2026-12-16", "和解日"],
       ["2026-12-25", "圣诞节"],
       ["2026-12-26", "善意日"]

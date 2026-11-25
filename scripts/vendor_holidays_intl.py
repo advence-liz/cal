@@ -385,7 +385,15 @@ class ZAYearSections(HTMLParser):
         self.capture = None
 
 
-def za_years(html):
+def za_years(html, proclamations=None):
+    by_year = defaultdict(dict)
+    for iso, entry in (proclamations or {}).items():
+        day = date.fromisoformat(iso)
+        if (day.isoformat() != iso or not entry['name']
+            or not entry['source'].startswith('https://www.gov.za/')):
+            raise MergeError(f'Invalid South African proclamation metadata: {iso}')
+        by_year[str(day.year)][day] = entry['name']
+
     parser = ZAYearSections()
     parser.feed(html)
     parser.close()
@@ -396,6 +404,8 @@ def za_years(html):
     expected = Counter(ZA_NAMES.values())
     for year, lines in sorted(parser.sections.items()):
         base, announced = [], []
+        declared = by_year.get(year, {})
+        listed_declarations = set()
         for line in lines:
             if not line or line.startswith('*'):
                 continue
@@ -404,6 +414,11 @@ def za_years(html):
                 raise MergeError(f'Unrecognized South African holiday row: {line!r}')
             day = mom_date(f'{raw_date.strip()} {year}')
             official = clean(official).rstrip(' *')
+            if official.casefold() in {'election day', 'local government election day', 'local government elections'}:
+                if declared.get(day) != '投票日' or day in listed_declarations:
+                    raise MergeError(f'Unreviewed or duplicate South African election holiday: {day}')
+                listed_declarations.add(day)
+                continue
             substitute = re.fullmatch(r'Public holiday (.+) observed', official, re.I)
             if substitute:
                 announced.append((day, translated(ZA_NAMES, substitute[1])))
@@ -416,7 +431,8 @@ def za_years(html):
         replacements = [(day + one_day, name, day) for day, name, _ in base if day.weekday() == 6]
         if len(set(announced)) != len(announced) or not set(announced) <= {(day, name) for day, name, _ in replacements}:
             raise MergeError(f'Unexpected South African substitute holiday for {year}')
-        result[year] = rows(base + replacements)
+        declared_rows = [(day, name, None) for day, name in declared.items()]
+        result[year] = rows(base + replacements + declared_rows)
     return result
 
 
@@ -772,7 +788,8 @@ def main():
             raw = load_source(FR_JSON, 'fr.json', options.input_dir)
             fresh = fr_years(json.loads(raw), 2025)
         elif options.region == 'za':
-            fresh = za_years(load_source(ZA_PAGE, 'za.html', options.input_dir, attempts=3))
+            fresh = za_years(load_source(ZA_PAGE, 'za.html', options.input_dir, attempts=3),
+                             before.get('proclamations'))
         elif options.region == 'au':
             fresh = au_years(load_source(NSW_PAGE, 'nsw.html', options.input_dir))
         elif options.region == 'sa':

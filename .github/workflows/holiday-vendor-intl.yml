@@ -38,8 +38,15 @@ jobs:
         id: vendor
         run: |
           set -o pipefail
-          python3 -I scripts/vendor_holidays_intl.py "$REGION" --apply | tee "$RUNNER_TEMP/holiday-vendor.log"
-          grep -E '^changed=(true|false)$' "$RUNNER_TEMP/holiday-vendor.log" >> "$GITHUB_OUTPUT"
+          log="$RUNNER_TEMP/holiday-vendor.log"
+          if ! python3 -I scripts/vendor_holidays_intl.py "$REGION" --apply 2>&1 | tee "$log"; then
+            detail=$(grep '^Holiday sync aborted without publishing:' "$log" | tail -n 1 | tr -d '\r' || true)
+            detail=${detail:-Official source check failed; see the job log.}
+            detail=${detail:0:400}
+            printf '::error title=Official holiday source check (%s)::%s\n' "$REGION" "${detail//%/%25}"
+            exit 1
+          fi
+          grep -E '^changed=(true|false)$' "$log" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         if: steps.vendor.outputs.changed == 'true'

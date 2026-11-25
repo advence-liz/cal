@@ -336,6 +336,17 @@ class IntlHolidayTests(unittest.TestCase):
         with self.assertRaises(MergeError):
             za_years(page.replace('<br>26 December: Day of Goodwill', ''))
 
+        proclamations = {'2027-11-03': {'name': '投票日', 'source': 'https://www.gov.za/example-proclamation'}}
+        expected = za_years(page, proclamations)['2027']
+        self.assertIn(['2027-11-03', '投票日'], expected)
+        explicit = page.replace('<p>24 September: Heritage Day</p>',
+                                '<p>24 September: Heritage Day<br>3 November: Election Day</p>')
+        self.assertEqual(expected, za_years(explicit, proclamations)['2027'])
+        with self.assertRaises(MergeError):
+            za_years(explicit.replace('3 November:', '4 November:'), proclamations)
+        with self.assertRaises(MergeError):
+            za_years(page, {'2027-12-25': proclamations['2027-11-03']})
+
     def test_keep_archived_year_but_never_replace_missing_latest_year(self):
         old = {'2025': [['2025-01-01', '元旦']], '2026': [['2026-01-01', '元旦']]}
         self.assertEqual(merge_years(old, {'2026': old['2026'], '2027': [['2027-01-01', '元旦']]}, 2026).keys(),

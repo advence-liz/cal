@@ -67,6 +67,15 @@ export async function runTests() {
     eq(us.get(2025).get('2025-01-20').name, '马丁·路德·金纪念日');
   });
 
+  await checkAsync('美国 OPM 延伸到 2030 年，保留周末补休口径', async () => {
+    const results = await loadYears([2028, 2029, 2030], 'US');
+    eq(results.every(({ source }) => source === 'local' || source === 'cache'), true);
+    const us = getDataStore('US');
+    eq(us.get(2028).get('2028-11-10').observedFor, '2028-11-11');
+    eq(us.get(2029).has('2029-01-20'), false); // Inauguration Day is not nationwide.
+    eq(us.get(2030).get('2030-12-25').name, '圣诞节');
+  });
+
   await checkAsync('8. 新加坡：周日补休、周六不自动补休；拼假也用同一口径', async () => {
     const sg = getDataStore('SG');
     eq(sg.get(2027).get('2027-02-08').observedFor, '2027-02-07');
@@ -108,6 +117,8 @@ export async function runTests() {
     eq(fr.get(2026).get('2026-11-01').name, '诸圣节');
     eq(addWorkdays('2026-10-30', 1, fr), '2026-11-02');
     eq(za.get(2027).get('2027-12-27').observedFor, '2027-12-26');
+    eq(za.get(2026).get('2026-11-04').name, '投票日');
+    eq(addWorkdays('2026-11-03', 1, za), '2026-11-05');
     eq(addWorkdays('2027-12-24', 1, za), '2027-12-28');
   });
 
