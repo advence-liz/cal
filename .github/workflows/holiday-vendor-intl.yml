@@ -1,35 +1,31 @@
 name: Check international holiday data
 
 on:
-  schedule:
-    - cron: '23 4 * * 2' # Weekly, Tuesday 04:23 UTC
-  workflow_dispatch: {}
+  push:
+    branches: [verify/holiday-actions-6e30164]
 
 permissions:
   contents: read
 
-# Avoid duplicate pushes/PR creation from overlapping schedule/manual runs.
+# Separate this one-off verification from the production schedule.
 concurrency:
-  group: holiday-vendor-intl-${{ github.repository }}
+  group: holiday-vendor-intl-verify-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   vendor:
-    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write
-      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
         region: [us, sg, jp, gb, fr, za, au, sa]
     env:
       REGION: ${{ matrix.region }}
-      BASE_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Test official-source parsers
         run: python3 -B -m unittest discover -s scripts -p 'test_vendor_holidays_intl.py'
@@ -62,48 +58,12 @@ jobs:
           echo "Test server failed to start" >&2
           exit 1
 
-      - name: Open or refresh a review-only pull request
-        if: success()
+      - name: Report the check result
+        if: always()
         env:
-          GH_TOKEN: ${{ github.token }}
           CHANGED: ${{ steps.vendor.outputs.changed }}
+          CHECK_OUTCOME: ${{ steps.vendor.outcome }}
         run: |
-          branch="automation/holiday-vendor-$REGION"
-          path="data/holidays-$REGION.json"
-          pr=$(gh pr list --head "$branch" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number // empty')
-          if [[ "$CHANGED" != true ]]; then
-            if [[ -n "$pr" ]]; then
-              echo "::warning::Official data now matches the base branch. Review or close the stale holiday update PR #$pr."
-            fi
-            exit 0
-          fi
-
-          remote=$(git ls-remote --heads origin "refs/heads/$branch")
-          sha=${remote%%[[:space:]]*}
-          if [[ -n "$sha" ]]; then
-            git fetch --no-tags origin "refs/heads/$branch"
-            if [[ -n "$pr" ]] && git show "FETCH_HEAD:$path" | cmp -s - "$path"; then
-              echo "Existing PR #$pr already contains the proposed data."
-              exit 0
-            fi
-          fi
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- "$path"
-          git commit -m "chore: refresh $REGION holidays from official sources" \
-            -m 'Co-Authored-By: Claude Code <noreply@anthropic.com>'
-          git push --force-with-lease="refs/heads/$branch:$sha" origin "HEAD:refs/heads/$branch"
-
-          body="$RUNNER_TEMP/holiday-pr.md"
-          {
-            printf '%s\n\n' 'Official holiday data changed. Parser checks and browser tests passed. Review the date changes before merging.'
-            grep -E '^(US|SG|JP|GB|FR|ZA|AU|SA) confirmed upstream:' "$RUNNER_TEMP/holiday-vendor.log"
-            printf '\n%s\n' '🤖 Generated with [Claude Code](https://claude.com/claude-code)'
-          } > "$body"
-          if [[ -n "$pr" ]]; then
-            gh pr edit "$pr" --body-file "$body"
-          else
-            gh pr create --base "$BASE_BRANCH" --head "$branch" \
-              --title "chore: refresh $REGION holidays" --body-file "$body"
-          fi
+          printf '### %s\n\nOfficial-source check: %s · Snapshot changed: %s\n' \
+            "$REGION" "$CHECK_OUTCOME" "${CHANGED:-unverified}" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nNo changes were pushed and no pull request was opened.\n' >> "$GITHUB_STEP_SUMMARY"

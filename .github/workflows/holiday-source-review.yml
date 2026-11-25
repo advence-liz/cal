@@ -1,6 +1,8 @@
 name: Review India and Brazil holiday sources
 
 on:
+  push:
+    branches: [verify/holiday-actions-6e30164]
   schedule:
     - cron: '37 4 * * 4' # Thursday 04:37 UTC, on the default branch
   workflow_dispatch: {}
