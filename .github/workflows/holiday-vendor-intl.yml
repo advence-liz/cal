@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region: [us, sg, jp, gb, fr, za, au, sa]
+        region: [za]
     env:
       REGION: ${{ matrix.region }}
     steps:
@@ -34,8 +34,21 @@ jobs:
         id: vendor
         run: |
           set -o pipefail
-          python3 -I scripts/vendor_holidays_intl.py "$REGION" --apply | tee "$RUNNER_TEMP/holiday-vendor.log"
-          grep -E '^changed=(true|false)$' "$RUNNER_TEMP/holiday-vendor.log" >> "$GITHUB_OUTPUT"
+          log="$RUNNER_TEMP/holiday-vendor.log"
+          if ! python3 -I scripts/vendor_holidays_intl.py "$REGION" --apply 2>&1 | tee "$log"; then
+            python3 -I - "$log" <<'PY'
+          from pathlib import Path
+          import sys
+          lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
+          detail = next((line for line in reversed(lines) if line.startswith('Holiday sync aborted without publishing:')), '')
+          if not detail:
+              detail = next((line for line in reversed(lines) if line.strip()), 'No diagnostic output')
+          detail = ''.join(char if char.isprintable() else ' ' for char in detail)[:450]
+          print('::error title=South Africa source check::' + detail.replace('%', '%25'))
+          PY
+            exit 1
+          fi
+          grep -E '^changed=(true|false)$' "$log" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         if: steps.vendor.outputs.changed == 'true'
