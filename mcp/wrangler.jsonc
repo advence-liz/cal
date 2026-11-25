@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "calendar-mcp-benchmark",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-25",
+  "workers_dev": true,
+  "preview_urls": false,
+  "build": { "command": "node bundle-worker-data.mjs" },
+  "observability": { "enabled": true }
+}

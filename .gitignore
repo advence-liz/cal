@@ -1,2 +1,4 @@
 node_modules/
 /dist/
+/mcp/.wrangler/
+/mcp/worker-snapshots.generated.mjs
