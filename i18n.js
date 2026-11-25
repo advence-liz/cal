@@ -45,7 +45,7 @@ const staticText = {
   regionJP: ['日本', 'Japan'], regionGB: ['英格兰和威尔士', 'England & Wales'],
   regionFR: ['法国本土', 'Metropolitan France'], regionZA: ['南非', 'South Africa'],
   regionIN: ['印度（德里中央机关）', 'India (Delhi Central Govt.)'], regionBR: ['巴西', 'Brazil'],
-  regionAU: ['澳大利亚（新南威尔士州）', 'Australia (NSW)'], regionSA: ['沙特阿拉伯（金融机构）', 'Saudi Arabia (Financial Institutions)'],
+  regionAU: ['澳大利亚（新南威尔士州）', 'Australia (NSW)'], regionSA: ['沙特阿拉伯（金融业）', 'Saudi Arabia (Financial Sector)'],
   clockTitle: ['时钟时区', 'Clock time zone'], clockAuto: ['跟随假期地区', 'Follow holiday region'],
   today: ['回到今天', 'Today'], todayShort: ['今天', 'Today'],
   weekday1: ['一', 'Mon'], weekday2: ['二', 'Tue'], weekday3: ['三', 'Wed'], weekday4: ['四', 'Thu'], weekday5: ['五', 'Fri'], weekday6: ['六', 'Sat'], weekday0: ['日', 'Sun'],

@@ -25,7 +25,7 @@ Render 免费实例闲置后，首次 MCP 调用可能要等约一分钟。若�
 | [Claude Code](https://code.claude.com/docs/en/mcp) | `claude mcp add --transport http moyu-calendar https://moyu-calendar-mcp.onrender.com/mcp` |
 | [Gemini CLI](https://geminicli.com/docs/tools/mcp-server/) | `gemini mcp add --transport http moyu-calendar https://moyu-calendar-mcp.onrender.com/mcp` |
 
-Codex CLI 和同一环境里的 Codex IDE 扩展共享配置。接入后，可在新会话里试一句：**「用摸鱼日历查一下，沙特金融机构从 2026 年 9 月 24 日到 27 日有几个工作日？」** 结果应为 **2 个（周四和周日）**。
+Codex CLI 和同一环境里的 Codex IDE 扩展共享配置。接入后，可在新会话里试一句：**「按沙特阿拉伯金融业的假期安排，2026 年 9 月 24 日到 27 日有几个工作日？」** 结果应为 **2 个（周四和周日）**。
 
 ### 网页版、桌面客户端和编辑器也能接入同一个 URL
 

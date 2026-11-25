@@ -18,7 +18,9 @@ test('static output preserves the existing PWA without publishing backend code o
     assert.match(guide, /href="\.\/"/);
     assert.match(guide, /id="site"/);
     assert.match(guide, /id="mcp"/);
+    assert.match(home, /data-region="SA"[^>]*>沙特阿拉伯（金融业）<\/button>/);
     const docs = await readFile(new URL('../README.md', import.meta.url), 'utf8');
+    for (const text of [docs, guide]) assert.match(text, /按沙特阿拉伯金融业的假期安排，2026 年 9 月 24 日到 27 日有几个工作日/);
     const mcpUrls = text => [...new Set(text.match(/https:\/\/[^/\s`"<]+\/mcp\b/g) ?? [])];
     const renderMcp = 'https://moyu-calendar-mcp.onrender.com/mcp';
     assert.deepEqual(mcpUrls(docs), [renderMcp], 'README must advertise only the Render MCP endpoint');

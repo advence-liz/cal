@@ -886,7 +886,7 @@ function updateRegionChrome() {
     IN: 'Gazetted holidays for Delhi/New Delhi central-government administrative offices. Excludes optional, state and private-sector holidays.',
     BR: 'Fixed nationwide statutory holidays only. Excludes state and municipal holidays, election days and optional federal-office closures.',
     AU: 'Statewide public holidays and additional days published by NSW. Excludes local and bank-only holidays.',
-    SA: 'Financial institutions only. Friday and Saturday are weekends; Sunday through Thursday are workdays. Individual branches may differ.',
+    SA: 'Uses the Saudi Central Bank’s holiday schedule for financial institutions, not a nationwide calendar. Friday and Saturday are weekends; Sunday through Thursday are workdays. Individual branches may differ.',
   };
   $('holidayScope').textContent = t(scope, scopeEn[state.region]);
   $('makeupLegend').hidden = state.region !== DEFAULT_REGION;
