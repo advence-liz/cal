@@ -12,7 +12,10 @@ from html.parser import HTMLParser
 import json
 from pathlib import Path
 import re
+from socket import timeout as SocketTimeout
 import sys
+from time import sleep
+from urllib.error import URLError
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 
 BASE = Path(__file__).resolve().parents[1]
@@ -708,15 +711,25 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def load_source(url, fixture, input_dir, encoding='utf-8-sig'):
+def load_source(url, fixture, input_dir, encoding='utf-8-sig', *, attempts=1):
     limit = 1_000_000
     if input_dir is not None:
         with (input_dir / fixture).open('rb') as stream:
             raw = stream.read(limit + 1)
     else:
         request = Request(url, headers={'User-Agent': 'Calendar holiday data checker'})
-        with build_opener(NoRedirect()).open(request, timeout=20) as response:
-            raw = response.read(limit + 1)
+        opener = build_opener(NoRedirect())
+        for attempt in range(1, attempts + 1):
+            try:
+                with opener.open(request, timeout=20) as response:
+                    raw = response.read(limit + 1)
+                break
+            except (URLError, TimeoutError, SocketTimeout) as error:
+                reason = error.reason if isinstance(error, URLError) else error
+                if attempt == attempts or not isinstance(reason, (TimeoutError, SocketTimeout)):
+                    raise
+                print(f'Upstream timeout for {fixture} (attempt {attempt}/{attempts}); retrying', file=sys.stderr)
+                sleep(2 ** attempt)
     if not raw or len(raw) > limit:
         raise MergeError(f'Empty or oversized upstream source: {fixture}')
     return raw.decode(encoding)
@@ -759,7 +772,7 @@ def main():
             raw = load_source(FR_JSON, 'fr.json', options.input_dir)
             fresh = fr_years(json.loads(raw), 2025)
         elif options.region == 'za':
-            fresh = za_years(load_source(ZA_PAGE, 'za.html', options.input_dir))
+            fresh = za_years(load_source(ZA_PAGE, 'za.html', options.input_dir, attempts=3))
         elif options.region == 'au':
             fresh = au_years(load_source(NSW_PAGE, 'nsw.html', options.input_dir))
         elif options.region == 'sa':

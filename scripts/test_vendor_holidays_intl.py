@@ -1,6 +1,46 @@
+import io
+from socket import timeout as SocketTimeout
 import unittest
+from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
-from vendor_holidays_intl import MergeError, parse_ics, parse_mom, reconcile_sg, us_years, merge_years
+from vendor_holidays_intl import MergeError, ZA_PAGE, load_source, parse_ics, parse_mom, reconcile_sg, us_years, merge_years
+
+
+class SourceFetchTests(unittest.TestCase):
+    @patch('vendor_holidays_intl.sleep')
+    @patch('vendor_holidays_intl.build_opener')
+    def test_timeout_retries_then_returns_official_payload(self, build, sleep):
+        opener = build.return_value
+        opener.open.side_effect = [URLError(SocketTimeout('connect')), TimeoutError('read'), io.BytesIO(b'official')]
+        self.assertEqual(load_source(ZA_PAGE, 'za.html', None, attempts=3), 'official')
+        self.assertEqual(opener.open.call_count, 3)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [2, 4])
+
+    @patch('vendor_holidays_intl.sleep')
+    @patch('vendor_holidays_intl.build_opener')
+    def test_exhausted_timeouts_surface_failure(self, build, sleep):
+        opener = build.return_value
+        opener.open.side_effect = URLError(TimeoutError('connect'))
+        with self.assertRaises(URLError):
+            load_source(ZA_PAGE, 'za.html', None, attempts=3)
+        self.assertEqual(opener.open.call_count, 3)
+        self.assertEqual(sleep.call_count, 2)
+
+    @patch('vendor_holidays_intl.sleep')
+    @patch('vendor_holidays_intl.build_opener')
+    def test_non_timeout_and_invalid_payload_fail_without_retry(self, build, sleep):
+        opener = build.return_value
+        opener.open.side_effect = HTTPError(ZA_PAGE, 302, 'redirect', {}, None)
+        with self.assertRaises(HTTPError):
+            load_source(ZA_PAGE, 'za.html', None, attempts=3)
+        opener.open.assert_called_once()
+        opener.open.reset_mock(side_effect=True)
+        opener.open.return_value = io.BytesIO(b'')
+        with self.assertRaisesRegex(MergeError, 'Empty or oversized'):
+            load_source(ZA_PAGE, 'za.html', None, attempts=3)
+        opener.open.assert_called_once()
+        sleep.assert_not_called()
 
 
 def ics(events):
