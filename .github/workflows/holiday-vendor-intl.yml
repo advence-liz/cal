@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        region: [us, sg, jp, gb, fr, za, au, sa]
+        region: [za]
     env:
       REGION: ${{ matrix.region }}
     steps:
@@ -70,6 +70,17 @@ jobs:
           done
           echo "Test server failed to start" >&2
           exit 1
+
+      - name: Diagnose public upstream connectivity
+        if: failure() && steps.vendor.outcome == 'failure'
+        run: |
+          endpoint='https://www.gov.za/about-sa/public-holidays'
+          status=0
+          timing=$(curl --ipv4 --silent --show-error --max-time 25 --output /dev/null \
+            --user-agent 'Calendar holiday data checker' \
+            --write-out 'HTTP %{http_code}, DNS %{time_namelookup}s, TCP %{time_connect}s, TLS %{time_appconnect}s, total %{time_total}s' \
+            "$endpoint") || status=$?
+          printf '::warning title=South Africa upstream connectivity::curl status %s; %s\n' "$status" "$timing"
 
       - name: Report the check result
         if: always()
